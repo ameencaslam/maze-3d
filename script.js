@@ -103,6 +103,10 @@ function create2DMaze() {
   // Ensure end is accessible
   maze[mazeSize - 2][mazeSize - 2] = 0;
 
+  // Set start and end points
+  maze[1][1] = 2; // 2 represents the start point
+  maze[mazeSize - 2][mazeSize - 2] = 3; // 3 represents the end point
+
   return maze;
 }
 
@@ -140,6 +144,33 @@ function create3DMaze(maze2D) {
   floor.receiveShadow = true;
   walls.add(floor);
 
+  // Add start marker
+  const startColor = 0x0000ff; // Blue
+  const startMarker = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.3, 0.1, 32),
+    new THREE.MeshPhongMaterial({ color: startColor }) // Blue
+  );
+  startMarker.position.set(
+    (1 - mazeSize / 2 + 0.5) * cellSize,
+    platformHeight + 0.05,
+    (1 - mazeSize / 2 + 0.5) * cellSize
+  );
+  startMarker.rotation.x = Math.PI / 2;
+  walls.add(startMarker);
+
+  // Add end sphere
+  const endColor = 0x00ff00; // Bright green
+  const endSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.MeshPhongMaterial({ color: endColor }) // Bright green
+  );
+  endSphere.position.set(
+    (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize,
+    platformHeight + 0.5,
+    (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize
+  );
+  walls.add(endSphere);
+
   scene.add(walls);
   return walls;
 }
@@ -173,6 +204,11 @@ function initializePlayerPosition() {
   const startX = (-mazeSize / 2 + 1.5) * cellSize;
   const startZ = (-mazeSize / 2 + 1.5) * cellSize;
   playerPosition.set(startX, playerHeight / 2 + platformHeight, startZ);
+
+  // Rotate 180 degrees (Math.PI radians) to face away from the wall
+  playerRotationY = Math.PI;
+
+  playerRotationX = 0; // Reset vertical rotation
   updateCameraPosition();
 }
 
@@ -328,7 +364,15 @@ function create2DMazeRepresentation() {
       const cell = document.createElement("div");
       cell.style.width = `${cellSize}px`;
       cell.style.height = `${cellSize}px`;
-      cell.style.backgroundColor = maze2D[j][i] === 1 ? "#808080" : "#fff";
+      if (maze2D[j][i] === 1) {
+        cell.style.backgroundColor = "#808080";
+      } else if (maze2D[j][i] === 2) {
+        cell.style.backgroundColor = "#0000ff"; // Start point (Blue)
+      } else if (maze2D[j][i] === 3) {
+        cell.style.backgroundColor = "#00ff00"; // End point (Bright green)
+      } else {
+        cell.style.backgroundColor = "#fff";
+      }
       mazeContainer.appendChild(cell);
     }
   }
@@ -417,11 +461,34 @@ window.addEventListener("resize", () => {
   }
 });
 
+// Add this function to check if the player has reached the end
+function checkEndReached() {
+  const endX = (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize;
+  const endZ = (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize;
+  const distance = playerPosition.distanceTo(
+    new THREE.Vector3(endX, playerPosition.y, endZ)
+  );
+
+  if (distance < 0.5 + 0.5) {
+    alert("Congratulations! You've completed the maze!");
+    restartGame();
+  }
+}
+
+// Add this function to restart the game
+function restartGame() {
+  initializePlayerPosition();
+  playerRotationX = 0;
+  playerRotationY = 0;
+  updateCameraPosition();
+}
+
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
   movePlayer();
   updatePlayerMarker2D(); // Call this every frame
+  checkEndReached(); // Add this line
   if (currentCamera === fpCamera) {
     renderer.render(scene, currentCamera);
   }
