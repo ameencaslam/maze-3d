@@ -243,19 +243,78 @@ function checkCollision(position) {
   return false;
 }
 
+// Add top-down camera
+const topCameraFrustumSize = mazeSize * cellSize;
+const topCamera = new THREE.OrthographicCamera(
+  -topCameraFrustumSize / 2,
+  topCameraFrustumSize / 2,
+  topCameraFrustumSize / 2,
+  -topCameraFrustumSize / 2,
+  0.1,
+  1000
+);
+topCamera.position.set(0, mazeSize * cellSize, 0);
+topCamera.lookAt(0, 0, 0);
+topCamera.updateProjectionMatrix();
+
+let currentCamera = fpCamera;
+
+// Player marker for top-down view
+const playerMarker = new THREE.Mesh(
+  new THREE.ConeGeometry(0.5, 1, 32),
+  new THREE.MeshBasicMaterial({ color: 0xff0000 })
+);
+playerMarker.rotation.x = Math.PI / 2;
+playerMarker.visible = false; // Initially invisible
+scene.add(playerMarker);
+
+// Update player marker position and rotation
+function updatePlayerMarker() {
+  playerMarker.position.copy(playerPosition);
+  playerMarker.position.y = wallHeight + 0.5;
+  playerMarker.rotation.y = -playerRotationY + Math.PI / 2;
+}
+
+// Toggle view function
+function toggleView() {
+  if (currentCamera === fpCamera) {
+    currentCamera = topCamera;
+    playerMarker.visible = true;
+  } else {
+    currentCamera = fpCamera;
+    playerMarker.visible = false;
+  }
+}
+
+// Add event listener to the button
+document.getElementById("viewToggle").addEventListener("click", toggleView);
+
+// Modify the window resize event listener
+window.addEventListener("resize", () => {
+  const aspect = window.innerWidth / window.innerHeight;
+
+  fpCamera.aspect = aspect;
+  fpCamera.updateProjectionMatrix();
+
+  const topCameraFrustumSize = mazeSize * cellSize;
+  topCamera.left = -topCameraFrustumSize / 2;
+  topCamera.right = topCameraFrustumSize / 2;
+  topCamera.top = topCameraFrustumSize / 2;
+  topCamera.bottom = -topCameraFrustumSize / 2;
+  topCamera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
   movePlayer();
-  renderer.render(scene, fpCamera);
+  updatePlayerMarker();
+  renderer.render(scene, currentCamera);
 }
-animate();
 
-// Handle window resizing
-window.addEventListener("resize", () => {
-  fpCamera.aspect = window.innerWidth / window.innerHeight;
-  fpCamera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+// Start the animation loop
+animate();
 
 console.log("Maze created");
