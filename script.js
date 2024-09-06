@@ -51,13 +51,78 @@ function createMazeWalls() {
 
 createMazeWalls();
 
-// Position the camera
-camera.position.set(0, (mazeSize * cellSize) / 2, mazeSize * cellSize);
-camera.lookAt(0, 0, 0);
+// Set initial player position
+const player = {
+  x: (-mazeSize * cellSize) / 2 + cellSize / 2,
+  y: 1, // Eye level
+  z: (-mazeSize * cellSize) / 2 + cellSize / 2,
+};
+
+// Position the camera (first-person view)
+camera.position.set(player.x, player.y, player.z);
+camera.lookAt(player.x, player.y, player.z - 1); // Look slightly forward
+
+// Movement variables
+const moveSpeed = 0.1;
+const keys = {};
+
+// Key press event listener
+document.addEventListener("keydown", (event) => {
+  keys[event.code] = true;
+});
+
+// Key release event listener
+document.addEventListener("keyup", (event) => {
+  keys[event.code] = false;
+});
+
+// Update player position based on key presses
+function updatePlayerPosition() {
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+  direction.y = 0;
+  direction.normalize();
+
+  if (keys["KeyW"]) {
+    player.x += direction.x * moveSpeed;
+    player.z += direction.z * moveSpeed;
+  }
+  if (keys["KeyS"]) {
+    player.x -= direction.x * moveSpeed;
+    player.z -= direction.z * moveSpeed;
+  }
+  if (keys["KeyA"]) {
+    player.x += direction.z * moveSpeed;
+    player.z -= direction.x * moveSpeed;
+  }
+  if (keys["KeyD"]) {
+    player.x -= direction.z * moveSpeed;
+    player.z += direction.x * moveSpeed;
+  }
+
+  camera.position.set(player.x, player.y, player.z);
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch;
+}
+
+// Add these variables after the player object
+let yaw = 0;
+let pitch = 0;
+
+// Add this function after updatePlayerPosition
+function onMouseMove(event) {
+  yaw -= event.movementX * 0.002;
+  pitch -= event.movementY * 0.002;
+  pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+}
+
+// Add this event listener before the animate function
+document.addEventListener("mousemove", onMouseMove);
 
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
+  updatePlayerPosition();
   renderer.render(scene, camera);
 }
 animate();
