@@ -390,7 +390,7 @@ function updatePlayerMarker2D() {
     playerMarker2D.style.top = `${z * cellSize2D}px`;
 
     // Update the rotation of the arrow (only Y-axis rotation)
-    const rotation = -playerRotationY + Math.PI / 2;
+    const rotation = -playerRotationY;
     playerMarker2D.style.transform = `translate(-50%, -50%) rotate(${rotation}rad)`;
   }
 }
