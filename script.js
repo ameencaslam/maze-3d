@@ -280,9 +280,36 @@ function toggleView() {
   if (currentCamera === fpCamera) {
     currentCamera = topCamera;
     playerMarker.visible = true;
+
+    // Adjust the renderer size to maintain the maze's aspect ratio
+    const mazeAspect = mazeSize / mazeSize; // Should be 1 for a square maze
+    const windowAspect = window.innerWidth / window.innerHeight;
+
+    if (windowAspect > mazeAspect) {
+      // Window is wider than the maze
+      const newWidth = window.innerHeight * mazeAspect;
+      renderer.setSize(newWidth, window.innerHeight);
+    } else {
+      // Window is taller than the maze
+      const newHeight = window.innerWidth / mazeAspect;
+      renderer.setSize(window.innerWidth, newHeight);
+    }
+
+    // Center the renderer
+    renderer.domElement.style.position = "absolute";
+    renderer.domElement.style.left = "50%";
+    renderer.domElement.style.top = "50%";
+    renderer.domElement.style.transform = "translate(-50%, -50%)";
   } else {
     currentCamera = fpCamera;
     playerMarker.visible = false;
+
+    // Reset to full screen for first-person view
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.domElement.style.position = "";
+    renderer.domElement.style.left = "";
+    renderer.domElement.style.top = "";
+    renderer.domElement.style.transform = "";
   }
 }
 
@@ -291,19 +318,23 @@ document.getElementById("viewToggle").addEventListener("click", toggleView);
 
 // Modify the window resize event listener
 window.addEventListener("resize", () => {
-  const aspect = window.innerWidth / window.innerHeight;
+  if (currentCamera === fpCamera) {
+    fpCamera.aspect = window.innerWidth / window.innerHeight;
+    fpCamera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  } else {
+    // Maintain aspect ratio for top-down view
+    const mazeAspect = mazeSize / mazeSize;
+    const windowAspect = window.innerWidth / window.innerHeight;
 
-  fpCamera.aspect = aspect;
-  fpCamera.updateProjectionMatrix();
-
-  const topCameraFrustumSize = mazeSize * cellSize;
-  topCamera.left = -topCameraFrustumSize / 2;
-  topCamera.right = topCameraFrustumSize / 2;
-  topCamera.top = topCameraFrustumSize / 2;
-  topCamera.bottom = -topCameraFrustumSize / 2;
-  topCamera.updateProjectionMatrix();
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
+    if (windowAspect > mazeAspect) {
+      const newWidth = window.innerHeight * mazeAspect;
+      renderer.setSize(newWidth, window.innerHeight);
+    } else {
+      const newHeight = window.innerWidth / mazeAspect;
+      renderer.setSize(window.innerWidth, newHeight);
+    }
+  }
 });
 
 // Animation loop
