@@ -21,7 +21,7 @@ scene.background = new THREE.Color(0x87ceeb);
 
 // Maze configuration
 const mazeSize = 21; // Odd number to ensure walls on all sides
-const cellSize = 2; // Increased cell size for wider paths
+const cellSize = 2.5; // Increased cell size for wider paths
 const wallHeight = 3; // Increased wall height
 const wallThickness = 0.1;
 const platformHeight = 0.2; // Height of the platform
@@ -161,7 +161,7 @@ scene.add(fpCamera);
 
 // Player configuration
 const playerHeight = 1.7;
-const moveSpeed = 0.1; // Slightly increased move speed
+const moveSpeed = 0.07; // Slightly increased move speed
 const mouseSensitivity = 0.002;
 
 // Player movement
@@ -262,7 +262,7 @@ function checkCollision(position) {
           const dx = position.x - wallX;
           const dz = position.z - wallZ;
           const distance = Math.sqrt(dx * dx + dz * dz);
-          if (distance < cellSize * 0.8) {
+          if (distance < cellSize * 0.7) {
             // Increased collision distance
             return true;
           }
