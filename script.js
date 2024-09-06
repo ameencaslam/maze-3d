@@ -19,8 +19,8 @@ scene.background = new THREE.Color(0x87ceeb);
 
 // Maze configuration
 const mazeSize = 21; // Odd number to ensure walls on all sides
-const cellSize = 1;
-const wallHeight = 0.5;
+const cellSize = 2; // Increased cell size for wider paths
+const wallHeight = 3; // Increased wall height
 const wallThickness = 0.1;
 const platformHeight = 0.2; // Height of the platform
 
@@ -118,55 +118,143 @@ function create3DMaze(maze2D) {
 const maze2D = create2DMaze();
 const mazeWalls = create3DMaze(maze2D);
 
-// Add start and end markers
-function addStartEndMarkers() {
-  const markerGeometry = new THREE.SphereGeometry(cellSize * 0.3, 32, 32);
-  const startMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-  const endMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+// First-person camera setup
+const fpCamera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+fpCamera.near = 0.05; // Adjusted near clipping plane
+fpCamera.updateProjectionMatrix();
+scene.add(fpCamera);
 
-  const startMarker = new THREE.Mesh(markerGeometry, startMaterial);
-  startMarker.position.set(
-    (-mazeSize / 2 + 1) * cellSize,
-    wallHeight / 2 + platformHeight / 2, // Adjust to sit on the platform
-    (-mazeSize / 2 + 1) * cellSize
-  );
-  scene.add(startMarker);
+// Player configuration
+const playerHeight = 1.7;
+const moveSpeed = 0.1; // Slightly increased move speed
+const mouseSensitivity = 0.002;
 
-  const endMarker = new THREE.Mesh(markerGeometry, endMaterial);
-  endMarker.position.set(
-    (mazeSize / 2 - 1) * cellSize,
-    wallHeight / 2 + platformHeight / 2, // Adjust to sit on the platform
-    (mazeSize / 2 - 1) * cellSize
-  );
-  scene.add(endMarker);
+// Player movement
+const playerPosition = new THREE.Vector3();
+let playerRotationX = 0;
+let playerRotationY = 0;
+
+function initializePlayerPosition() {
+  const startX = (-mazeSize / 2 + 1.5) * cellSize; // Adjusted to center of first cell
+  const startZ = (-mazeSize / 2 + 1.5) * cellSize; // Adjusted to center of first cell
+  playerPosition.set(startX, playerHeight / 2 + platformHeight, startZ);
+  updateCameraPosition();
 }
 
-addStartEndMarkers();
+function updateCameraPosition() {
+  fpCamera.position.copy(playerPosition);
+  fpCamera.rotation.order = "YXZ";
+  fpCamera.rotation.y = playerRotationY;
+  fpCamera.rotation.x = playerRotationX;
+}
 
-// Adjust camera position to see the platform
-camera.position.set(
-  (mazeSize * cellSize) / 2,
-  (mazeSize * cellSize) / 2 + 5, // Increase height slightly
-  (mazeSize * cellSize) / 2
-);
-camera.lookAt(0, 0, 0);
+initializePlayerPosition();
+
+// Movement controls
+const keys = {
+  KeyW: false,
+  KeyS: false,
+  KeyA: false,
+  KeyD: false,
+};
+
+document.addEventListener("keydown", (event) => {
+  if (event.code in keys) {
+    keys[event.code] = true;
+  }
+});
+
+document.addEventListener("keyup", (event) => {
+  if (event.code in keys) {
+    keys[event.code] = false;
+  }
+});
+
+// Mouse movement for rotation
+document.addEventListener("mousemove", (event) => {
+  if (document.pointerLockElement === renderer.domElement) {
+    playerRotationY -= event.movementX * mouseSensitivity;
+    playerRotationX -= event.movementY * mouseSensitivity;
+    playerRotationX = Math.max(
+      -Math.PI / 2,
+      Math.min(Math.PI / 2, playerRotationX)
+    );
+    updateCameraPosition();
+  }
+});
+
+// Lock pointer on click
+renderer.domElement.addEventListener("click", () => {
+  renderer.domElement.requestPointerLock();
+});
+
+function movePlayer() {
+  const moveVector = new THREE.Vector3();
+  if (keys.KeyW) moveVector.z -= 1;
+  if (keys.KeyS) moveVector.z += 1;
+  if (keys.KeyA) moveVector.x -= 1;
+  if (keys.KeyD) moveVector.x += 1;
+
+  moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotationY);
+  moveVector.normalize().multiplyScalar(moveSpeed);
+
+  const newPosition = playerPosition.clone().add(moveVector);
+  if (!checkCollision(newPosition)) {
+    playerPosition.copy(newPosition);
+  }
+
+  updateCameraPosition();
+}
+
+function checkCollision(position) {
+  const mazeX = Math.floor((position.x + (mazeSize * cellSize) / 2) / cellSize);
+  const mazeZ = Math.floor((position.z + (mazeSize * cellSize) / 2) / cellSize);
+
+  // Check surrounding cells for collision
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      const checkX = mazeX + dx;
+      const checkZ = mazeZ + dz;
+      if (
+        checkX >= 0 &&
+        checkX < mazeSize &&
+        checkZ >= 0 &&
+        checkZ < mazeSize
+      ) {
+        if (maze2D[checkZ][checkX] === 1) {
+          const wallX = (checkX - mazeSize / 2 + 0.5) * cellSize;
+          const wallZ = (checkZ - mazeSize / 2 + 0.5) * cellSize;
+          const dx = position.x - wallX;
+          const dz = position.z - wallZ;
+          const distance = Math.sqrt(dx * dx + dz * dz);
+          if (distance < cellSize * 0.7) {
+            // Increased collision distance
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
 
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
-  renderer.render(scene, camera);
+  movePlayer();
+  renderer.render(scene, fpCamera);
 }
 animate();
 
 // Handle window resizing
 window.addEventListener("resize", () => {
-  const aspect = window.innerWidth / window.innerHeight;
-  const frustumSize = 15;
-  camera.left = (-frustumSize * aspect) / 2;
-  camera.right = (frustumSize * aspect) / 2;
-  camera.top = frustumSize / 2;
-  camera.bottom = -frustumSize / 2;
-  camera.updateProjectionMatrix();
+  fpCamera.aspect = window.innerWidth / window.innerHeight;
+  fpCamera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
