@@ -78,46 +78,52 @@ document.addEventListener("keyup", (event) => {
 
 // Update player position based on key presses
 function updatePlayerPosition() {
-  const direction = new THREE.Vector3();
-  camera.getWorldDirection(direction);
-  direction.y = 0;
-  direction.normalize();
+  const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
 
-  if (keys["KeyW"]) {
-    player.x += direction.x * moveSpeed;
-    player.z += direction.z * moveSpeed;
-  }
-  if (keys["KeyS"]) {
-    player.x -= direction.x * moveSpeed;
-    player.z -= direction.z * moveSpeed;
-  }
-  if (keys["KeyA"]) {
-    player.x += direction.z * moveSpeed;
-    player.z -= direction.x * moveSpeed;
-  }
-  if (keys["KeyD"]) {
-    player.x -= direction.z * moveSpeed;
-    player.z += direction.x * moveSpeed;
-  }
+  let moveDirection = new THREE.Vector3(0, 0, 0);
+
+  if (keys["KeyW"]) moveDirection.add(forward);
+  if (keys["KeyS"]) moveDirection.sub(forward);
+  if (keys["KeyA"]) moveDirection.sub(right);
+  if (keys["KeyD"]) moveDirection.add(right);
+
+  moveDirection.normalize().multiplyScalar(moveSpeed);
+
+  player.x += moveDirection.x;
+  player.z += moveDirection.z;
 
   camera.position.set(player.x, player.y, player.z);
   camera.rotation.y = yaw;
-  camera.rotation.x = pitch;
 }
 
 // Add these variables after the player object
 let yaw = 0;
-let pitch = 0;
+let isMouseLocked = false;
 
-// Add this function after updatePlayerPosition
+// Update the onMouseMove function
 function onMouseMove(event) {
-  yaw -= event.movementX * 0.002;
-  pitch -= event.movementY * 0.002;
-  pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+  if (isMouseLocked) {
+    yaw -= event.movementX * 0.002;
+    // Ensure yaw stays within 0 to 2π range
+    yaw = yaw % (2 * Math.PI);
+    if (yaw < 0) yaw += 2 * Math.PI;
+  }
 }
 
-// Add this event listener before the animate function
+// Update or add these event listeners
 document.addEventListener("mousemove", onMouseMove);
+
+document.addEventListener("click", () => {
+  if (!isMouseLocked) {
+    document.body.requestPointerLock();
+  }
+});
+
+document.addEventListener("pointerlockchange", () => {
+  isMouseLocked = document.pointerLockElement === document.body;
+  instructions.style.display = isMouseLocked ? "none" : "block";
+});
 
 // Animation loop
 function animate() {
@@ -135,3 +141,14 @@ window.addEventListener("resize", () => {
 });
 
 console.log("Maze created");
+
+// Add this after creating the renderer
+const instructions = document.createElement("div");
+instructions.style.position = "absolute";
+instructions.style.top = "10px";
+instructions.style.width = "100%";
+instructions.style.textAlign = "center";
+instructions.style.color = "white";
+instructions.style.fontFamily = "Arial, sans-serif";
+instructions.innerHTML = "Click to start<br>WASD to move, Mouse to look";
+document.body.appendChild(instructions);
