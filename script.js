@@ -170,8 +170,8 @@ let playerRotationX = 0;
 let playerRotationY = 0;
 
 function initializePlayerPosition() {
-  const startX = (-mazeSize / 2 + 1.5) * cellSize; // Adjusted to center of first cell
-  const startZ = (-mazeSize / 2 + 1.5) * cellSize; // Adjusted to center of first cell
+  const startX = (-mazeSize / 2 + 1.5) * cellSize;
+  const startZ = (-mazeSize / 2 + 1.5) * cellSize;
   playerPosition.set(startX, playerHeight / 2 + platformHeight, startZ);
   updateCameraPosition();
 }
@@ -307,41 +307,91 @@ function updatePlayerMarker() {
   playerMarker.rotation.z = -playerRotationY + Math.PI; // Adjusted rotation
 }
 
-// Toggle view function
+// Add this function to create a 2D representation of the maze
+function create2DMazeRepresentation() {
+  const mazeContainer = document.createElement("div");
+  mazeContainer.style.position = "absolute";
+  mazeContainer.style.left = "50%";
+  mazeContainer.style.top = "50%";
+  mazeContainer.style.transform = "translate(-50%, -50%)";
+  mazeContainer.style.display = "grid";
+  mazeContainer.style.gridTemplateColumns = `repeat(${mazeSize}, 1fr)`;
+  mazeContainer.style.gap = "0";
+  mazeContainer.style.backgroundColor = "#000";
+  mazeContainer.style.padding = "0";
+
+  const cellSize =
+    Math.min(window.innerWidth / mazeSize, window.innerHeight / mazeSize) * 0.9;
+
+  for (let j = 0; j < mazeSize; j++) {
+    for (let i = 0; i < mazeSize; i++) {
+      const cell = document.createElement("div");
+      cell.style.width = `${cellSize}px`;
+      cell.style.height = `${cellSize}px`;
+      cell.style.backgroundColor = maze2D[j][i] === 1 ? "#808080" : "#fff";
+      mazeContainer.appendChild(cell);
+    }
+  }
+
+  // Add player marker (arrow)
+  const playerMarker = document.createElement("div");
+  playerMarker.style.position = "absolute";
+  playerMarker.style.width = "0";
+  playerMarker.style.height = "0";
+  playerMarker.style.borderLeft = `${cellSize * 0.5}px solid transparent`;
+  playerMarker.style.borderRight = `${cellSize * 0.5}px solid transparent`;
+  playerMarker.style.borderBottom = `${cellSize * 1}px solid red`;
+  playerMarker.style.transform = "translate(-50%, -50%)";
+  mazeContainer.appendChild(playerMarker);
+
+  return { mazeContainer, playerMarker, cellSize };
+}
+
+let maze2DRepresentation;
+let playerMarker2D;
+let cellSize2D;
+
+// Modify the toggleView function
 function toggleView() {
   if (currentCamera === fpCamera) {
-    currentCamera = topCamera;
-    playerMarker.visible = true;
-
-    // Adjust the renderer size to maintain the maze's aspect ratio
-    const mazeAspect = mazeSize / mazeSize; // Should be 1 for a square maze
-    const windowAspect = window.innerWidth / window.innerHeight;
-
-    if (windowAspect > mazeAspect) {
-      // Window is wider than the maze
-      const newWidth = window.innerHeight * mazeAspect;
-      renderer.setSize(newWidth, window.innerHeight);
-    } else {
-      // Window is taller than the maze
-      const newHeight = window.innerWidth / mazeAspect;
-      renderer.setSize(window.innerWidth, newHeight);
+    currentCamera = null;
+    if (!maze2DRepresentation) {
+      const { mazeContainer, playerMarker, cellSize } =
+        create2DMazeRepresentation();
+      maze2DRepresentation = mazeContainer;
+      playerMarker2D = playerMarker;
+      cellSize2D = cellSize;
+      document.body.appendChild(maze2DRepresentation);
     }
-
-    // Center the renderer
-    renderer.domElement.style.position = "absolute";
-    renderer.domElement.style.left = "50%";
-    renderer.domElement.style.top = "50%";
-    renderer.domElement.style.transform = "translate(-50%, -50%)";
+    maze2DRepresentation.style.display = "grid";
+    renderer.domElement.style.display = "none";
+    updatePlayerMarker2D();
   } else {
     currentCamera = fpCamera;
-    playerMarker.visible = false;
-
-    // Reset to full screen for first-person view
+    if (maze2DRepresentation) {
+      maze2DRepresentation.style.display = "none";
+    }
+    renderer.domElement.style.display = "block";
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.domElement.style.position = "";
-    renderer.domElement.style.left = "";
-    renderer.domElement.style.top = "";
-    renderer.domElement.style.transform = "";
+  }
+}
+
+// Update the 2D player marker position and rotation
+function updatePlayerMarker2D() {
+  if (playerMarker2D) {
+    const mazeOffsetX = (mazeSize * cellSize) / 2;
+    const mazeOffsetZ = (mazeSize * cellSize) / 2;
+
+    // Calculate the position relative to the maze
+    const x = (playerPosition.x + mazeOffsetX) / cellSize;
+    const z = (playerPosition.z + mazeOffsetZ) / cellSize;
+
+    playerMarker2D.style.left = `${x * cellSize2D}px`;
+    playerMarker2D.style.top = `${z * cellSize2D}px`;
+
+    // Update the rotation of the arrow (only Y-axis rotation)
+    const rotation = -playerRotationY + Math.PI / 2;
+    playerMarker2D.style.transform = `translate(-50%, -50%) rotate(${rotation}rad)`;
   }
 }
 
@@ -354,18 +404,16 @@ window.addEventListener("resize", () => {
     fpCamera.aspect = window.innerWidth / window.innerHeight;
     fpCamera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-  } else {
-    // Maintain aspect ratio for top-down view
-    const mazeAspect = mazeSize / mazeSize;
-    const windowAspect = window.innerWidth / window.innerHeight;
-
-    if (windowAspect > mazeAspect) {
-      const newWidth = window.innerHeight * mazeAspect;
-      renderer.setSize(newWidth, window.innerHeight);
-    } else {
-      const newHeight = window.innerWidth / mazeAspect;
-      renderer.setSize(window.innerWidth, newHeight);
-    }
+  } else if (maze2DRepresentation) {
+    // Recreate the 2D maze representation to fit the new window size
+    document.body.removeChild(maze2DRepresentation);
+    const { mazeContainer, playerMarker, cellSize } =
+      create2DMazeRepresentation();
+    maze2DRepresentation = mazeContainer;
+    playerMarker2D = playerMarker;
+    cellSize2D = cellSize;
+    document.body.appendChild(maze2DRepresentation);
+    updatePlayerMarker2D();
   }
 });
 
@@ -373,8 +421,10 @@ window.addEventListener("resize", () => {
 function animate() {
   requestAnimationFrame(animate);
   movePlayer();
-  updatePlayerMarker();
-  renderer.render(scene, currentCamera);
+  updatePlayerMarker2D(); // Call this every frame
+  if (currentCamera === fpCamera) {
+    renderer.render(scene, currentCamera);
+  }
 }
 
 // Start the animation loop
