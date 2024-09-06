@@ -6,8 +6,10 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 // Set background color to sky blue
@@ -23,18 +25,57 @@ const floorGeometry = new THREE.PlaneGeometry(
   mazeSize * cellSize,
   mazeSize * cellSize
 );
-const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+const floorMaterial = new THREE.MeshPhongMaterial({ color: 0xd2b48c }); // Tan color
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
 scene.add(floor);
+
+// Add a directional light for shadows
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7); // Increase intensity
+directionalLight.position.set(5, 10, 7.5);
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 1024;
+directionalLight.shadow.mapSize.height = 1024;
+directionalLight.shadow.camera.near = 1;
+directionalLight.shadow.camera.far = 50;
+scene.add(directionalLight);
+
+// Add ambient light
+const ambientLight = new THREE.AmbientLight(0x404040, 0.6); // Increase intensity
+scene.add(ambientLight);
 
 // Create maze walls
 function createMazeWalls() {
   const wallGeometry = new THREE.BoxGeometry(cellSize, wallHeight, cellSize);
-  const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x8b4513 });
+  const wallMaterial = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    shininess: 0,
+  });
 
+  // Create surrounding walls
+  for (let i = -1; i <= mazeSize; i++) {
+    for (let j = -1; j <= mazeSize; j++) {
+      if (i === -1 || i === mazeSize || j === -1 || j === mazeSize) {
+        const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+        wall.position.set(
+          (i - mazeSize / 2 + 0.5) * cellSize,
+          wallHeight / 2,
+          (j - mazeSize / 2 + 0.5) * cellSize
+        );
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        scene.add(wall);
+      }
+    }
+  }
+
+  // Create inner maze walls
   for (let i = 0; i < mazeSize; i++) {
     for (let j = 0; j < mazeSize; j++) {
+      // Clear area around spawn point (2x2 cells)
+      if (i < 2 && j < 2) continue;
+
       if (Math.random() < 0.3) {
         // 30% chance of a wall
         const wall = new THREE.Mesh(wallGeometry, wallMaterial);
@@ -43,6 +84,8 @@ function createMazeWalls() {
           wallHeight / 2,
           (j - mazeSize / 2 + 0.5) * cellSize
         );
+        wall.castShadow = true;
+        wall.receiveShadow = true;
         scene.add(wall);
 
         // Add slightly larger invisible wall for collision
@@ -52,7 +95,7 @@ function createMazeWalls() {
           cellSize + 0.1
         );
         const collisionWallMaterial = new THREE.MeshBasicMaterial({
-          color: 0x8b4513,
+          color: 0xffffff,
           transparent: true,
           opacity: 0,
         });
@@ -94,9 +137,9 @@ function checkCollision(x, z) {
 
 // Set initial player position
 const player = {
-  x: (-mazeSize * cellSize) / 2 + cellSize / 2,
+  x: (-mazeSize * cellSize) / 2 + cellSize,
   y: 1, // Eye level
-  z: (-mazeSize * cellSize) / 2 + cellSize / 2,
+  z: (-mazeSize * cellSize) / 2 + cellSize,
 };
 
 // Position the camera (first-person view)
@@ -104,41 +147,50 @@ camera.position.set(player.x, player.y, player.z);
 camera.lookAt(player.x, player.y, player.z - 1); // Look slightly forward
 
 // Movement variables
-const moveSpeed = 0.1;
+const moveSpeed = 0.12;
 const keys = {};
 
-// Key press event listener
-document.addEventListener("keydown", (event) => {
-  keys[event.code] = true;
-});
+// Add these variables near the top of your file, after the moveSpeed constant
+let currentVelocity = new THREE.Vector3(0, 0, 0);
+const acceleration = 0.008;
+const deceleration = 0.03;
+const maxSpeed = moveSpeed;
 
-// Key release event listener
-document.addEventListener("keyup", (event) => {
-  keys[event.code] = false;
-});
-
-// Update player position based on key presses
+// Replace the existing updatePlayerPosition function with this one
 function updatePlayerPosition() {
   const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
   const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
 
-  let moveDirection = new THREE.Vector3(0, 0, 0);
+  let targetVelocity = new THREE.Vector3(0, 0, 0);
 
-  if (keys["KeyW"]) moveDirection.add(forward);
-  if (keys["KeyS"]) moveDirection.sub(forward);
-  if (keys["KeyA"]) moveDirection.sub(right);
-  if (keys["KeyD"]) moveDirection.add(right);
+  if (keys["KeyW"]) targetVelocity.add(forward);
+  if (keys["KeyS"]) targetVelocity.sub(forward);
+  if (keys["KeyA"]) targetVelocity.sub(right);
+  if (keys["KeyD"]) targetVelocity.add(right);
 
-  moveDirection.normalize().multiplyScalar(moveSpeed);
+  if (targetVelocity.length() > 0) {
+    targetVelocity.normalize().multiplyScalar(maxSpeed);
+  }
 
-  const newX = player.x + moveDirection.x;
-  const newZ = player.z + moveDirection.z;
+  currentVelocity.lerp(
+    targetVelocity,
+    keys["KeyW"] || keys["KeyS"] || keys["KeyA"] || keys["KeyD"]
+      ? acceleration
+      : deceleration
+  );
+
+  const newX = player.x + currentVelocity.x;
+  const newZ = player.z + currentVelocity.z;
 
   if (!checkCollision(newX, player.z)) {
     player.x = newX;
+  } else {
+    currentVelocity.x = 0;
   }
   if (!checkCollision(player.x, newZ)) {
     player.z = newZ;
+  } else {
+    currentVelocity.z = 0;
   }
 
   camera.position.set(player.x, player.y, player.z);
@@ -199,3 +251,13 @@ instructions.style.color = "white";
 instructions.style.fontFamily = "Arial, sans-serif";
 instructions.innerHTML = "Click to start<br>WASD to move, Mouse to look";
 document.body.appendChild(instructions);
+
+// Key press event listener
+document.addEventListener("keydown", (event) => {
+  keys[event.code] = true;
+});
+
+// Key release event listener
+document.addEventListener("keyup", (event) => {
+  keys[event.code] = false;
+});
