@@ -12,6 +12,8 @@ const camera = new THREE.OrthographicCamera(
 );
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 // Set background color to sky blue
@@ -25,11 +27,24 @@ const wallThickness = 0.1;
 const platformHeight = 0.2; // Height of the platform
 
 // Add lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(5, 10, 5);
+directionalLight.position.set(
+  (mazeSize * cellSize) / 2,
+  mazeSize * cellSize,
+  (mazeSize * cellSize) / 2
+);
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 2048;
+directionalLight.shadow.mapSize.height = 2048;
+directionalLight.shadow.camera.near = 0.5;
+directionalLight.shadow.camera.far = mazeSize * cellSize * 2;
+directionalLight.shadow.camera.left = -mazeSize * cellSize;
+directionalLight.shadow.camera.right = mazeSize * cellSize;
+directionalLight.shadow.camera.top = mazeSize * cellSize;
+directionalLight.shadow.camera.bottom = -mazeSize * cellSize;
 scene.add(directionalLight);
 
 // Create platform
@@ -42,6 +57,7 @@ function createPlatform() {
   const platformMaterial = new THREE.MeshPhongMaterial({ color: 0x8b4513 }); // Brown color
   const platform = new THREE.Mesh(platformGeometry, platformMaterial);
   platform.position.set(0, -platformHeight / 2, 0); // Position it directly under the maze
+  platform.receiveShadow = true;
   scene.add(platform);
 }
 
@@ -105,6 +121,8 @@ function create3DMaze(maze2D) {
           wallHeight / 2 + platformHeight / 2, // Place walls directly on the platform
           (j - mazeSize / 2 + 0.5) * cellSize
         );
+        wall.castShadow = true;
+        wall.receiveShadow = true;
         walls.add(wall);
       }
     }
@@ -262,11 +280,12 @@ let currentCamera = fpCamera;
 // Player marker for top-down view
 const playerMarker = new THREE.Mesh(
   new THREE.ConeGeometry(0.5, 1, 32),
-  new THREE.MeshBasicMaterial({ color: 0xff0000 })
+  new THREE.MeshPhongMaterial({ color: 0xff0000 })
 );
 playerMarker.rotation.x = Math.PI / 2;
 playerMarker.rotation.z = Math.PI / 2; // Rotate 90 degrees to the right
 playerMarker.visible = false; // Initially invisible
+playerMarker.castShadow = true;
 scene.add(playerMarker);
 
 // Update player marker position and rotation
