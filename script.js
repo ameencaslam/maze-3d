@@ -27,7 +27,7 @@ const wallThickness = 0.1;
 const platformHeight = 0.2; // Height of the platform
 
 // Add lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.2); // Reduced ambient light intensity
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -118,15 +118,27 @@ function create3DMaze(maze2D) {
         const wall = new THREE.Mesh(wallGeometry, wallMaterial);
         wall.position.set(
           (i - mazeSize / 2 + 0.5) * cellSize,
-          wallHeight / 2 + platformHeight / 2, // Place walls directly on the platform
+          wallHeight / 2 + platformHeight / 2,
           (j - mazeSize / 2 + 0.5) * cellSize
         );
         wall.castShadow = true;
-        wall.receiveShadow = true;
+        wall.receiveShadow = false; // Walls don't receive shadows
         walls.add(wall);
       }
     }
   }
+
+  // Create a single floor plane for the entire maze
+  const floorGeometry = new THREE.PlaneGeometry(
+    mazeSize * cellSize,
+    mazeSize * cellSize
+  );
+  const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x8b4513 }); // Brown color
+  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = platformHeight / 2;
+  floor.receiveShadow = true;
+  walls.add(floor);
 
   scene.add(walls);
   return walls;
