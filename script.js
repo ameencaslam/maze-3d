@@ -22,6 +22,7 @@ const mazeSize = 21; // Odd number to ensure walls on all sides
 const cellSize = 1;
 const wallHeight = 0.5;
 const wallThickness = 0.1;
+const platformHeight = 0.2; // Height of the platform
 
 // Add lights
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -30,6 +31,22 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 directionalLight.position.set(5, 10, 5);
 scene.add(directionalLight);
+
+// Create platform
+function createPlatform() {
+  const platformGeometry = new THREE.BoxGeometry(
+    mazeSize * cellSize,
+    platformHeight,
+    mazeSize * cellSize
+  );
+  const platformMaterial = new THREE.MeshPhongMaterial({ color: 0x8b4513 }); // Brown color
+  const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+  platform.position.set(0, -platformHeight / 2, 0); // Position it directly under the maze
+  scene.add(platform);
+}
+
+// Call createPlatform before creating the maze
+createPlatform();
 
 // Create 2D maze
 function create2DMaze() {
@@ -85,7 +102,7 @@ function create3DMaze(maze2D) {
         const wall = new THREE.Mesh(wallGeometry, wallMaterial);
         wall.position.set(
           (i - mazeSize / 2 + 0.5) * cellSize,
-          wallHeight / 2,
+          wallHeight / 2 + platformHeight / 2, // Place walls directly on the platform
           (j - mazeSize / 2 + 0.5) * cellSize
         );
         walls.add(wall);
@@ -110,7 +127,7 @@ function addStartEndMarkers() {
   const startMarker = new THREE.Mesh(markerGeometry, startMaterial);
   startMarker.position.set(
     (-mazeSize / 2 + 1) * cellSize,
-    wallHeight / 2,
+    wallHeight / 2 + platformHeight / 2, // Adjust to sit on the platform
     (-mazeSize / 2 + 1) * cellSize
   );
   scene.add(startMarker);
@@ -118,7 +135,7 @@ function addStartEndMarkers() {
   const endMarker = new THREE.Mesh(markerGeometry, endMaterial);
   endMarker.position.set(
     (mazeSize / 2 - 1) * cellSize,
-    wallHeight / 2,
+    wallHeight / 2 + platformHeight / 2, // Adjust to sit on the platform
     (mazeSize / 2 - 1) * cellSize
   );
   scene.add(endMarker);
@@ -126,10 +143,10 @@ function addStartEndMarkers() {
 
 addStartEndMarkers();
 
-// Adjust camera position
+// Adjust camera position to see the platform
 camera.position.set(
   (mazeSize * cellSize) / 2,
-  (mazeSize * cellSize) / 2,
+  (mazeSize * cellSize) / 2 + 5, // Increase height slightly
   (mazeSize * cellSize) / 2
 );
 camera.lookAt(0, 0, 0);
