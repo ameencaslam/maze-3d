@@ -232,7 +232,7 @@ function checkCollision(position) {
           const dx = position.x - wallX;
           const dz = position.z - wallZ;
           const distance = Math.sqrt(dx * dx + dz * dz);
-          if (distance < cellSize * 0.7) {
+          if (distance < cellSize * 0.8) {
             // Increased collision distance
             return true;
           }
@@ -265,6 +265,7 @@ const playerMarker = new THREE.Mesh(
   new THREE.MeshBasicMaterial({ color: 0xff0000 })
 );
 playerMarker.rotation.x = Math.PI / 2;
+playerMarker.rotation.z = Math.PI / 2; // Rotate 90 degrees to the right
 playerMarker.visible = false; // Initially invisible
 scene.add(playerMarker);
 
@@ -272,7 +273,7 @@ scene.add(playerMarker);
 function updatePlayerMarker() {
   playerMarker.position.copy(playerPosition);
   playerMarker.position.y = wallHeight + 0.5;
-  playerMarker.rotation.y = -playerRotationY + Math.PI / 2;
+  playerMarker.rotation.z = -playerRotationY + Math.PI; // Adjusted rotation
 }
 
 // Toggle view function
