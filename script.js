@@ -44,12 +44,53 @@ function createMazeWalls() {
           (j - mazeSize / 2 + 0.5) * cellSize
         );
         scene.add(wall);
+
+        // Add slightly larger invisible wall for collision
+        const collisionWallGeometry = new THREE.BoxGeometry(
+          cellSize + 0.1,
+          wallHeight,
+          cellSize + 0.1
+        );
+        const collisionWallMaterial = new THREE.MeshBasicMaterial({
+          color: 0x8b4513,
+          transparent: true,
+          opacity: 0,
+        });
+        const collisionWall = new THREE.Mesh(
+          collisionWallGeometry,
+          collisionWallMaterial
+        );
+        collisionWall.position.copy(wall.position);
+        scene.add(collisionWall);
       }
     }
   }
 }
 
 createMazeWalls();
+
+// Add this function after createMazeWalls()
+const wallMargin = 0.2; // Minimum distance from walls
+
+function checkCollision(x, z) {
+  const gridX = Math.floor((x + (mazeSize * cellSize) / 2) / cellSize);
+  const gridZ = Math.floor((z + (mazeSize * cellSize) / 2) / cellSize);
+
+  // Check if the position is within the maze bounds
+  if (gridX < 0 || gridX >= mazeSize || gridZ < 0 || gridZ >= mazeSize) {
+    return true; // Collision with maze boundary
+  }
+
+  // Check if there's a wall at this position
+  return scene.children.some((child) => {
+    if (child.isMesh && child !== floor) {
+      const dx = Math.abs(child.position.x - x);
+      const dz = Math.abs(child.position.z - z);
+      return dx < cellSize / 2 + wallMargin && dz < cellSize / 2 + wallMargin;
+    }
+    return false;
+  });
+}
 
 // Set initial player position
 const player = {
@@ -90,8 +131,15 @@ function updatePlayerPosition() {
 
   moveDirection.normalize().multiplyScalar(moveSpeed);
 
-  player.x += moveDirection.x;
-  player.z += moveDirection.z;
+  const newX = player.x + moveDirection.x;
+  const newZ = player.z + moveDirection.z;
+
+  if (!checkCollision(newX, player.z)) {
+    player.x = newX;
+  }
+  if (!checkCollision(player.x, newZ)) {
+    player.z = newZ;
+  }
 
   camera.position.set(player.x, player.y, player.z);
   camera.rotation.y = yaw;
@@ -132,7 +180,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
-
 // Handle window resizing
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
