@@ -121,29 +121,23 @@ function create2DMaze() {
   return maze;
 }
 
-// Add this array of colors near the top of the file, after the maze configuration
-const wallColors = [
-  0x800000, // Dark Red
-  0x008000, // Dark Green
-  0x000080, // Dark Blue
-  0x808000, // Olive
-  0x800080, // Purple
-  0x008080, // Teal
-  0x804000, // Brown
-  0x400040, // Dark Purple
-  0x004040, // Dark Teal
-  0x804000, // Dark Orange
-  0x2b0057, // Dark Indigo
-  0x1e6b1e, // Dark Lime Green
-  0x008b8b, // Dark Cyan
-  0xc71585, // Medium Violet Red
-  0x0000cd, // Medium Blue
-  0xb8860b, // Dark Goldenrod
-  0x5c4033, // Dark Brown
-  0x006400, // Dark Green
-  0x483d8b, // Dark Slate Blue
-  0x2f4f4f, // Dark Slate Gray
+// Replace the wallColors array with this rainbow color array
+const rainbowColors = [
+  0xff0000, // Red
+  0xff7f00, // Orange
+  0xffff00, // Yellow
+  0x00ff00, // Green
+  0x0000ff, // Blue
+  0x4b0082, // Indigo
+  0x9400d3, // Violet
 ];
+
+// Add this function to interpolate between colors
+function interpolateColor(color1, color2, factor) {
+  const c1 = new THREE.Color(color1);
+  const c2 = new THREE.Color(color2);
+  return new THREE.Color().lerpColors(c1, c2, factor);
+}
 
 // Modify the create3DMaze function
 function create3DMaze(maze2D) {
@@ -178,11 +172,24 @@ function create3DMaze(maze2D) {
   for (let i = 0; i < mazeSize; i++) {
     for (let j = 0; j < mazeSize; j++) {
       if (maze2D[j][i] === 1) {
-        // Create a new material with a random color for each wall
+        // Calculate the position in the rainbow gradient
+        const gradientPosition = (i + j) / (2 * mazeSize);
+        const colorIndex = Math.floor(
+          gradientPosition * (rainbowColors.length - 1)
+        );
+        const colorFactor =
+          gradientPosition * (rainbowColors.length - 1) - colorIndex;
+
+        const wallColor = interpolateColor(
+          rainbowColors[colorIndex],
+          rainbowColors[(colorIndex + 1) % rainbowColors.length],
+          colorFactor
+        );
+
         const wallMaterial = new THREE.MeshStandardMaterial({
-          color: wallColors[Math.floor(Math.random() * wallColors.length)],
-          roughness: 0.7, // Increase roughness
-          metalness: 0.2, // Increase metalness slightly
+          color: wallColor,
+          roughness: 0.7,
+          metalness: 0.2,
           side: THREE.DoubleSide,
           map: wallTexture,
         });
@@ -237,9 +244,8 @@ function create3DMaze(maze2D) {
   // Replace the end sphere code
   const endMarkerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
   const endMarkerMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff0000, // Changed to red
-    emissive: 0xff0000, // Changed to red
-    emissiveIntensity: 0.8, // Increased for more glow
+    emissive: 0xff0000,
+    emissiveIntensity: 0.8,
     roughness: 0.2,
     metalness: 0.8,
   });
@@ -254,10 +260,15 @@ function create3DMaze(maze2D) {
 
   // Modify pulsating animation for end marker
   function pulsateEndMarker() {
-    const scale = 1 + Math.sin(Date.now() * 0.005) * 0.2; // Increased amplitude for more noticeable pulsation
+    const time = Date.now() * 0.001; // Current time in seconds
+    const scale = 1 + Math.sin(time * 3) * 0.2;
     endMarker.scale.set(scale, scale, scale);
-    endMarker.material.emissiveIntensity =
-      0.5 + Math.sin(Date.now() * 0.005) * 0.3; // Pulsating glow
+
+    // Change color continuously
+    const hue = (time * 0.1) % 1;
+    endMarker.material.emissive.setHSL(hue, 1, 0.5);
+    endMarker.material.color.setHSL(hue, 1, 0.5);
+
     requestAnimationFrame(pulsateEndMarker);
   }
   pulsateEndMarker();
