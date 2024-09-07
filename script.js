@@ -30,6 +30,7 @@ const gameState = {
   playerMarker2D: null,
   cellSize2D: null,
   maze2DRepresentation: null,
+  endReached: false,
 };
 
 // Global functions
@@ -119,6 +120,8 @@ function updatePlayerMarker2D() {
 }
 
 function checkEndReached() {
+  if (gameState.endReached) return;
+
   const endX =
     (gameState.mazeSize - 2 - gameState.mazeSize / 2 + 0.5) *
     gameState.cellSize;
@@ -130,11 +133,9 @@ function checkEndReached() {
   );
 
   if (distance < 0.5 + 0.5) {
+    gameState.endReached = true;
     alert("Congratulations! You've completed the maze!");
-    restartGame();
-    setTimeout(() => {
-      gameState.renderer.domElement.requestPointerLock();
-    }, 100);
+    location.reload(); // This will reload the entire page
   }
 }
 
@@ -673,6 +674,7 @@ function initGame() {
     gameState.playerRotationY = 0;
     updateCameraPosition();
     resetMovementKeys();
+    gameState.endReached = false;
   }
 
   document.getElementById("viewToggle").addEventListener("click", toggleView);
@@ -721,7 +723,7 @@ document.addEventListener("DOMContentLoaded", () => {
       progress = Math.min(progress, 100);
       loadingProgress.style.width = `${progress}%`;
       loadingPercentage.textContent = `${Math.round(progress)}%`;
-      setTimeout(simulateLoading, 200);
+      setTimeout(simulateLoading, 150);
     } else {
       loadingScreen.style.display = "none";
       container.style.display = "block";
