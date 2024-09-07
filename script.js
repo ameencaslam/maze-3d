@@ -316,6 +316,10 @@ const keys = {
   KeyS: false,
   KeyA: false,
   KeyD: false,
+  ArrowLeft: false,
+  ArrowRight: false,
+  ArrowUp: false,
+  ArrowDown: false,
 };
 
 document.addEventListener("keydown", (event) => {
@@ -363,6 +367,7 @@ function movePlayer() {
     playerPosition.copy(newPosition);
   }
 
+  handleArrowKeyRotation(); // Add this line to handle arrow key rotation
   updateCameraPosition();
 }
 
@@ -547,6 +552,10 @@ function resetMovementKeys() {
   keys.KeyS = false;
   keys.KeyA = false;
   keys.KeyD = false;
+  keys.ArrowLeft = false;
+  keys.ArrowRight = false;
+  keys.ArrowUp = false;
+  keys.ArrowDown = false;
 }
 
 // Modify the restartGame function
@@ -574,6 +583,31 @@ function checkEndReached() {
       renderer.domElement.requestPointerLock();
     }, 100);
   }
+}
+
+// Add this function to handle rotation via arrow keys
+function handleArrowKeyRotation() {
+  const rotationSpeed = 0.05; // Adjust this value to change rotation speed
+  if (keys.ArrowLeft) {
+    playerRotationY += rotationSpeed;
+  }
+  if (keys.ArrowRight) {
+    playerRotationY -= rotationSpeed;
+  }
+  if (keys.ArrowUp) {
+    playerRotationX += rotationSpeed; // Changed from -= to +=
+  }
+  if (keys.ArrowDown) {
+    playerRotationX -= rotationSpeed; // Changed from += to -=
+  }
+
+  // Clamp vertical rotation to prevent over-rotation
+  playerRotationX = Math.max(
+    -Math.PI / 2,
+    Math.min(Math.PI / 2, playerRotationX)
+  );
+
+  updateCameraPosition();
 }
 
 function animate() {
