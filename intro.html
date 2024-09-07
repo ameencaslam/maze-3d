@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Carme&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>3D-MAZE</title>
+    <style>
+      body {
+        background: linear-gradient(
+          180deg,
+          rgba(57, 255, 20, 0.9),
+          #000000,
+          #000000,
+          #000000,
+          rgba(57, 255, 20, 0.9)
+        );
+        background-size: 100% 400%;
+        animation: gradient 15s ease infinite;
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+        font-family: "Press Start 2P", cursive;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      @keyframes gradient {
+        0% {
+          background-position: 0% 0%;
+        }
+        50% {
+          background-position: 0% 100%;
+        }
+        100% {
+          background-position: 0% 0%;
+        }
+      }
+
+      .container {
+        text-align: center;
+      }
+
+      .container h1 {
+        color: #39ff14;
+        font-size: 80px;
+        text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14, 0 0 15px #39ff14;
+        margin-bottom: 50px;
+        animation: flicker 7s linear infinite;
+      }
+
+      @keyframes flicker {
+        0%,
+        19.999%,
+        22%,
+        62.999%,
+        64%,
+        64.999%,
+        70%,
+        100% {
+          text-shadow: none;
+        }
+        20%,
+        21.999%,
+        63%,
+        63.999%,
+        65%,
+        69.999% {
+          text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14, 0 0 15px #39ff14;
+        }
+      }
+
+      .container button {
+        background-color: #39ff14;
+        border: none;
+        color: #000;
+        font-family: "Press Start 2P", cursive;
+        font-size: 24px;
+        padding: 15px 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .container button::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.4),
+          transparent
+        );
+        transition: 0.5s;
+      }
+
+      .container button:hover::before {
+        left: 100%;
+      }
+
+      .container button:active {
+        transform: scale(0.95);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>3D-MAZE</h1>
+      <button>Play</button>
+    </div>
+  </body>
+</html>
