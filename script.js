@@ -30,10 +30,10 @@ const wallThickness = 0.1;
 const platformHeight = 0.2;
 
 // Lighting setup
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Increase intensity
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffffd0, 0.9);
+const sunLight = new THREE.DirectionalLight(0xffffd0, 1.2); // Increase intensity
 sunLight.position.set(
   mazeSize * cellSize * 0.5,
   mazeSize * cellSize * 1.5,
@@ -121,42 +121,72 @@ function create2DMaze() {
   return maze;
 }
 
-// Convert 2D maze to 3D
+// Add this array of colors near the top of the file, after the maze configuration
+const wallColors = [
+  0x800000, // Dark Red
+  0x008000, // Dark Green
+  0x000080, // Dark Blue
+  0x808000, // Olive
+  0x800080, // Purple
+  0x008080, // Teal
+  0x804000, // Brown
+  0x400040, // Dark Purple
+  0x004040, // Dark Teal
+  0x804000, // Dark Orange
+  0x2b0057, // Dark Indigo
+  0x1e6b1e, // Dark Lime Green
+  0x008b8b, // Dark Cyan
+  0xc71585, // Medium Violet Red
+  0x0000cd, // Medium Blue
+  0xb8860b, // Dark Goldenrod
+  0x5c4033, // Dark Brown
+  0x006400, // Dark Green
+  0x483d8b, // Dark Slate Blue
+  0x2f4f4f, // Dark Slate Gray
+];
+
+// Modify the create3DMaze function
 function create3DMaze(maze2D) {
   const walls = new THREE.Group();
 
   const wallGeometry = new THREE.BoxGeometry(cellSize, wallHeight, cellSize);
-  const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.5,
-    metalness: 0.1,
-    side: THREE.DoubleSide,
-  });
 
-  const edgeGeometry = new THREE.CylinderGeometry(0.03, 0.03, wallHeight, 8);
-  const outerEdgeMaterial = new THREE.MeshStandardMaterial({
-    color: 0x808080,
-    roughness: 0.5,
-    metalness: 0.5,
-  });
-  const innerEdgeMaterial = new THREE.MeshStandardMaterial({
-    color: 0xa0a0a0,
-    roughness: 0.5,
-    metalness: 0.5,
-  });
+  // Add this function to create a subtle texture for the walls
+  function createWallTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
 
-  function isCorner(x, y) {
-    let adjacentWalls = 0;
-    if (x > 0 && maze2D[y][x - 1] === 1) adjacentWalls++;
-    if (x < mazeSize - 1 && maze2D[y][x + 1] === 1) adjacentWalls++;
-    if (y > 0 && maze2D[y - 1][x] === 1) adjacentWalls++;
-    if (y < mazeSize - 1 && maze2D[y + 1][x] === 1) adjacentWalls++;
-    return adjacentWalls < 4; // Consider all cells with less than 4 adjacent walls as corners
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 128, 128);
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+    for (let i = 0; i < 128; i += 4) {
+      for (let j = 0; j < 128; j += 4) {
+        if (Math.random() > 0.5) {
+          ctx.fillRect(i, j, 4, 4);
+        }
+      }
+    }
+
+    return new THREE.CanvasTexture(canvas);
   }
+
+  const wallTexture = createWallTexture();
 
   for (let i = 0; i < mazeSize; i++) {
     for (let j = 0; j < mazeSize; j++) {
       if (maze2D[j][i] === 1) {
+        // Create a new material with a random color for each wall
+        const wallMaterial = new THREE.MeshStandardMaterial({
+          color: wallColors[Math.floor(Math.random() * wallColors.length)],
+          roughness: 0.7, // Increase roughness
+          metalness: 0.2, // Increase metalness slightly
+          side: THREE.DoubleSide,
+          map: wallTexture,
+        });
+
         const wall = new THREE.Mesh(wallGeometry, wallMaterial);
         wall.position.set(
           (i - mazeSize / 2 + 0.5) * cellSize,
@@ -166,32 +196,6 @@ function create3DMaze(maze2D) {
         wall.castShadow = true;
         wall.receiveShadow = true;
         walls.add(wall);
-
-        // Add edge highlights for all corners
-        if (isCorner(i, j)) {
-          const edges = [
-            { x: -1, z: -1 },
-            { x: 1, z: -1 },
-            { x: -1, z: 1 },
-            { x: 1, z: 1 },
-          ];
-
-          edges.forEach((edge) => {
-            const edgeMesh = new THREE.Mesh(
-              edgeGeometry,
-              i === 0 || i === mazeSize - 1 || j === 0 || j === mazeSize - 1
-                ? outerEdgeMaterial
-                : innerEdgeMaterial
-            );
-            edgeMesh.position.set(
-              wall.position.x + (edge.x * cellSize) / 2,
-              wall.position.y,
-              wall.position.z + (edge.z * cellSize) / 2
-            );
-            edgeMesh.castShadow = true;
-            walls.add(edgeMesh);
-          });
-        }
       }
     }
   }
@@ -201,7 +205,7 @@ function create3DMaze(maze2D) {
     mazeSize * cellSize
   );
   const floorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x00ff00,
+    color: 0x808080, // Change to a neutral gray
     roughness: 0.8,
     metalness: 0.1,
   });
