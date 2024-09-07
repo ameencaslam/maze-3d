@@ -33,7 +33,7 @@ const platformHeight = 0.2;
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffffd0, 1);
+const sunLight = new THREE.DirectionalLight(0xffffd0, 0.9);
 sunLight.position.set(
   mazeSize * cellSize * 0.5,
   mazeSize * cellSize * 1.5,
