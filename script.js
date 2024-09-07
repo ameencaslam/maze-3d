@@ -40,15 +40,15 @@ sunLight.position.set(
   mazeSize * cellSize * 0.5
 );
 sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 4096;
-sunLight.shadow.mapSize.height = 4096;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
 sunLight.shadow.camera.near = 0.5;
 sunLight.shadow.camera.far = mazeSize * cellSize * 4;
 sunLight.shadow.camera.left = -mazeSize * cellSize;
 sunLight.shadow.camera.right = mazeSize * cellSize;
 sunLight.shadow.camera.top = mazeSize * cellSize;
 sunLight.shadow.camera.bottom = -mazeSize * cellSize;
-sunLight.shadow.bias = -0.0001;
+sunLight.shadow.bias = -0.0005;
 sunLight.shadow.normalBias = 0.02;
 scene.add(sunLight);
 
@@ -151,7 +151,7 @@ function create3DMaze(maze2D) {
     if (x < mazeSize - 1 && maze2D[y][x + 1] === 1) adjacentWalls++;
     if (y > 0 && maze2D[y - 1][x] === 1) adjacentWalls++;
     if (y < mazeSize - 1 && maze2D[y + 1][x] === 1) adjacentWalls++;
-    return adjacentWalls === 1 || adjacentWalls === 3;
+    return adjacentWalls < 4; // Consider all cells with less than 4 adjacent walls as corners
   }
 
   for (let i = 0; i < mazeSize; i++) {
@@ -167,7 +167,7 @@ function create3DMaze(maze2D) {
         wall.receiveShadow = true;
         walls.add(wall);
 
-        // Add edge highlights
+        // Add edge highlights for all corners
         if (isCorner(i, j)) {
           const edges = [
             { x: -1, z: -1 },
