@@ -4,29 +4,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maze Generator - First Person View</title>
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-        user-select: none;
-      }
-      canvas {
-        display: block;
-      }
-      #viewToggle {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        padding: 10px;
-        background-color: rgba(255, 255, 255, 0.7);
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Carme&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <button id="viewToggle">Toggle View</button>
+    <div id="loading-screen">
+      <div id="loading-text">Loading 3D-MAZE</div>
+      <div id="loading-bar">
+        <div id="loading-progress"></div>
+      </div>
+      <div id="loading-percentage">0%</div>
+    </div>
+
+    <div class="container">
+      <h1>3D-MAZE</h1>
+      <button id="play-button">Play</button>
+    </div>
+
+    <button id="viewToggle" class="hidden">Change View</button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="script.js"></script>
   </body>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Carme&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>3D-MAZE</title>
+    <style>
+      body {
+        background-color: #001011;
+        background-size: 100% 400%;
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+        font-family: "Press Start 2P", cursive;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .container {
+        text-align: center;
+      }
+
+      .container h1 {
+        color: #39ff14;
+        font-size: 80px;
+        text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14, 0 0 15px #39ff14;
+        margin-bottom: 50px;
+        animation: flicker 7s linear infinite;
+      }
+
+      @keyframes flicker {
+        0%,
+        19.999%,
+        22%,
+        62.999%,
+        64%,
+        64.999%,
+        70%,
+        100% {
+          text-shadow: none;
+        }
+        20%,
+        21.999%,
+        63%,
+        63.999%,
+        65%,
+        69.999% {
+          text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14, 0 0 15px #39ff14;
+        }
+      }
+
+      .container button {
+        background-color: #39ff14;
+        border: none;
+        color: #001011;
+        font-family: "Press Start 2P", cursive;
+        font-size: 24px;
+        padding: 15px 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .container button::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.4),
+          transparent
+        );
+        transition: 0.5s;
+      }
+
+      .container button:hover::before {
+        left: 100%;
+      }
+
+      .container button:active {
+        transform: scale(0.95);
+      }
+
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #001011;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+
+      #loading-text {
+        color: #39ff14;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+
+      #loading-bar {
+        width: 300px;
+        height: 20px;
+        background-color: #001011;
+        border: 2px solid #39ff14;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      #loading-progress {
+        width: 0%;
+        height: 100%;
+        background-color: #39ff14;
+        transition: width 0.5s ease;
+      }
+
+      #loading-percentage {
+        color: #39ff14;
+        font-size: 18px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-screen">
+      <div id="loading-text">Loading 3D-MAZE</div>
+      <div id="loading-bar">
+        <div id="loading-progress"></div>
+      </div>
+      <div id="loading-percentage">0%</div>
+    </div>
+
+    <div class="container">
+      <h1>3D-MAZE</h1>
+      <button>Play</button>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const loadingScreen = document.getElementById("loading-screen");
+        const loadingProgress = document.getElementById("loading-progress");
+        const loadingPercentage = document.getElementById("loading-percentage");
+        let progress = 0;
+
+        function simulateLoading() {
+          if (progress < 100) {
+            progress += Math.random() * 10;
+            progress = Math.min(progress, 100);
+            loadingProgress.style.width = `${progress}%`;
+            loadingPercentage.textContent = `${Math.round(progress)}%`;
+            setTimeout(simulateLoading, 200);
+          } else {
+            loadingScreen.style.display = "none";
+          }
+        }
+
+        simulateLoading();
+      });
+    </script>
+  </body>
+</html>
