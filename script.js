@@ -139,6 +139,43 @@ function interpolateColor(color1, color2, factor) {
   return new THREE.Color().lerpColors(c1, c2, factor);
 }
 
+// Add this function to create dust particles
+function createDustParticles() {
+  const particleCount = 1000;
+  const particles = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+
+  for (let i = 0; i < particleCount * 3; i += 3) {
+    positions[i] =
+      Math.random() * mazeSize * cellSize - (mazeSize * cellSize) / 2;
+    positions[i + 1] = Math.random() * wallHeight;
+    positions[i + 2] =
+      Math.random() * mazeSize * cellSize - (mazeSize * cellSize) / 2;
+  }
+
+  particles.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+  const particleMaterial = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.05,
+    transparent: true,
+    opacity: 0.5,
+    map: new THREE.TextureLoader().load(
+      "https://threejs.org/examples/textures/sprites/disc.png"
+    ),
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  const particleSystem = new THREE.Points(particles, particleMaterial);
+  scene.add(particleSystem);
+
+  return particleSystem;
+}
+
+// Add this variable to store the particle system
+let dustParticles;
+
 // Modify the create3DMaze function
 function create3DMaze(maze2D) {
   const walls = new THREE.Group();
@@ -272,6 +309,9 @@ function create3DMaze(maze2D) {
     requestAnimationFrame(pulsateEndMarker);
   }
   pulsateEndMarker();
+
+  // Create dust particles
+  dustParticles = createDustParticles();
 
   scene.add(walls);
   return walls;
@@ -630,6 +670,19 @@ function animate() {
   movePlayer();
   updatePlayerMarker2D();
   checkEndReached();
+
+  // Animate dust particles
+  if (dustParticles) {
+    const positions = dustParticles.geometry.attributes.position.array;
+    for (let i = 1; i < positions.length; i += 3) {
+      positions[i] -= 0.01;
+      if (positions[i] < 0) {
+        positions[i] = wallHeight;
+      }
+    }
+    dustParticles.geometry.attributes.position.needsUpdate = true;
+  }
+
   if (currentCamera === fpCamera) {
     renderer.render(scene, currentCamera);
   }
