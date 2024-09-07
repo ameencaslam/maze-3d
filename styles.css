@@ -137,3 +137,7 @@ canvas {
   cursor: pointer;
   font-family: "Press Start 2P", cursive;
 }
+
+.hidden {
+  display: none;
+}

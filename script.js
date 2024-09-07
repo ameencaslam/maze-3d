@@ -706,6 +706,9 @@ function initGame() {
   animate();
 
   console.log("Maze created");
+
+  // Show the toggle button when the game starts
+  document.getElementById("viewToggle").classList.remove("hidden");
 }
 
 // Event listener for DOMContentLoaded
