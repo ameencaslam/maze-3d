@@ -14,38 +14,46 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 document.body.appendChild(renderer.domElement);
 
 // Set background color to sky blue
 scene.background = new THREE.Color(0x87ceeb);
 
 // Maze configuration
-const mazeSize = 21; // Odd number to ensure walls on all sides
-const cellSize = 2.5; // Increased cell size for wider paths
-const wallHeight = 3; // Increased wall height
+const mazeSize = 21;
+const cellSize = 2.5;
+const wallHeight = 3;
 const wallThickness = 0.1;
-const platformHeight = 0.2; // Height of the platform
+const platformHeight = 0.2;
 
-// Add lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.2); // Reduced ambient light intensity
+// Lighting setup
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(
-  (mazeSize * cellSize) / 2,
-  mazeSize * cellSize,
-  (mazeSize * cellSize) / 2
+const sunLight = new THREE.DirectionalLight(0xffffd0, 1);
+sunLight.position.set(
+  mazeSize * cellSize * 0.5,
+  mazeSize * cellSize * 1.5,
+  mazeSize * cellSize * 0.5
 );
-directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048;
-directionalLight.shadow.mapSize.height = 2048;
-directionalLight.shadow.camera.near = 0.5;
-directionalLight.shadow.camera.far = mazeSize * cellSize * 2;
-directionalLight.shadow.camera.left = -mazeSize * cellSize;
-directionalLight.shadow.camera.right = mazeSize * cellSize;
-directionalLight.shadow.camera.top = mazeSize * cellSize;
-directionalLight.shadow.camera.bottom = -mazeSize * cellSize;
-scene.add(directionalLight);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 4096;
+sunLight.shadow.mapSize.height = 4096;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = mazeSize * cellSize * 4;
+sunLight.shadow.camera.left = -mazeSize * cellSize;
+sunLight.shadow.camera.right = mazeSize * cellSize;
+sunLight.shadow.camera.top = mazeSize * cellSize;
+sunLight.shadow.camera.bottom = -mazeSize * cellSize;
+sunLight.shadow.bias = -0.0001;
+sunLight.shadow.normalBias = 0.02;
+scene.add(sunLight);
+
+const fillLight = new THREE.HemisphereLight(0x8080ff, 0x404040, 0.5);
+scene.add(fillLight);
 
 // Create platform
 function createPlatform() {
@@ -54,14 +62,17 @@ function createPlatform() {
     platformHeight,
     mazeSize * cellSize
   );
-  const platformMaterial = new THREE.MeshPhongMaterial({ color: 0x8b4513 }); // Brown color
+  const platformMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b4513,
+    roughness: 0.8,
+    metalness: 0.2,
+  });
   const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-  platform.position.set(0, -platformHeight / 2, 0); // Position it directly under the maze
+  platform.position.set(0, -platformHeight / 2, 0);
   platform.receiveShadow = true;
   scene.add(platform);
 }
 
-// Call createPlatform before creating the maze
 createPlatform();
 
 // Create 2D maze
@@ -112,9 +123,36 @@ function create2DMaze() {
 
 // Convert 2D maze to 3D
 function create3DMaze(maze2D) {
-  const wallGeometry = new THREE.BoxGeometry(cellSize, wallHeight, cellSize);
-  const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 });
   const walls = new THREE.Group();
+
+  const wallGeometry = new THREE.BoxGeometry(cellSize, wallHeight, cellSize);
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.5,
+    metalness: 0.1,
+    side: THREE.DoubleSide,
+  });
+
+  const edgeGeometry = new THREE.CylinderGeometry(0.03, 0.03, wallHeight, 8);
+  const outerEdgeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x808080,
+    roughness: 0.5,
+    metalness: 0.5,
+  });
+  const innerEdgeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xa0a0a0,
+    roughness: 0.5,
+    metalness: 0.5,
+  });
+
+  function isCorner(x, y) {
+    let adjacentWalls = 0;
+    if (x > 0 && maze2D[y][x - 1] === 1) adjacentWalls++;
+    if (x < mazeSize - 1 && maze2D[y][x + 1] === 1) adjacentWalls++;
+    if (y > 0 && maze2D[y - 1][x] === 1) adjacentWalls++;
+    if (y < mazeSize - 1 && maze2D[y + 1][x] === 1) adjacentWalls++;
+    return adjacentWalls === 1 || adjacentWalls === 3;
+  }
 
   for (let i = 0; i < mazeSize; i++) {
     for (let j = 0; j < mazeSize; j++) {
@@ -126,18 +164,47 @@ function create3DMaze(maze2D) {
           (j - mazeSize / 2 + 0.5) * cellSize
         );
         wall.castShadow = true;
-        wall.receiveShadow = false; // Walls don't receive shadows
+        wall.receiveShadow = true;
         walls.add(wall);
+
+        // Add edge highlights
+        if (isCorner(i, j)) {
+          const edges = [
+            { x: -1, z: -1 },
+            { x: 1, z: -1 },
+            { x: -1, z: 1 },
+            { x: 1, z: 1 },
+          ];
+
+          edges.forEach((edge) => {
+            const edgeMesh = new THREE.Mesh(
+              edgeGeometry,
+              i === 0 || i === mazeSize - 1 || j === 0 || j === mazeSize - 1
+                ? outerEdgeMaterial
+                : innerEdgeMaterial
+            );
+            edgeMesh.position.set(
+              wall.position.x + (edge.x * cellSize) / 2,
+              wall.position.y,
+              wall.position.z + (edge.z * cellSize) / 2
+            );
+            edgeMesh.castShadow = true;
+            walls.add(edgeMesh);
+          });
+        }
       }
     }
   }
 
-  // Create a single floor plane for the entire maze
   const floorGeometry = new THREE.PlaneGeometry(
     mazeSize * cellSize,
     mazeSize * cellSize
   );
-  const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x8b4513 }); // Brown color
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0x00ff00,
+    roughness: 0.8,
+    metalness: 0.1,
+  });
   const floor = new THREE.Mesh(floorGeometry, floorMaterial);
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = platformHeight / 2;
@@ -145,10 +212,13 @@ function create3DMaze(maze2D) {
   walls.add(floor);
 
   // Add start marker
-  const startColor = 0x0000ff; // Blue
   const startMarker = new THREE.Mesh(
     new THREE.CylinderGeometry(0.3, 0.3, 0.1, 32),
-    new THREE.MeshPhongMaterial({ color: startColor }) // Blue
+    new THREE.MeshStandardMaterial({
+      color: 0x0000ff,
+      roughness: 0.5,
+      metalness: 0.5,
+    })
   );
   startMarker.position.set(
     (1 - mazeSize / 2 + 0.5) * cellSize,
@@ -156,19 +226,24 @@ function create3DMaze(maze2D) {
     (1 - mazeSize / 2 + 0.5) * cellSize
   );
   startMarker.rotation.x = Math.PI / 2;
+  startMarker.castShadow = true;
   walls.add(startMarker);
 
   // Add end sphere
-  const endColor = 0x00ff00; // Bright green
   const endSphere = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 32, 32),
-    new THREE.MeshPhongMaterial({ color: endColor }) // Bright green
+    new THREE.MeshStandardMaterial({
+      color: 0x00ff00,
+      roughness: 0.2,
+      metalness: 0.8,
+    })
   );
   endSphere.position.set(
     (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize,
     platformHeight + 0.5,
     (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize
   );
+  endSphere.castShadow = true;
   walls.add(endSphere);
 
   scene.add(walls);
@@ -186,13 +261,15 @@ const fpCamera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-fpCamera.near = 0.05; // Adjusted near clipping plane
+fpCamera.near = 0.1;
+fpCamera.far = mazeSize * cellSize;
 fpCamera.updateProjectionMatrix();
 scene.add(fpCamera);
 
 // Player configuration
-const playerHeight = 1.7;
-const moveSpeed = 0.07; // Slightly increased move speed
+const playerHeight = 0.8;
+const playerRadius = 0.2;
+const moveSpeed = 0.07;
 const mouseSensitivity = 0.002;
 
 // Player movement
@@ -205,15 +282,15 @@ function initializePlayerPosition() {
   const startZ = (-mazeSize / 2 + 1.5) * cellSize;
   playerPosition.set(startX, playerHeight / 2 + platformHeight, startZ);
 
-  // Rotate 180 degrees (Math.PI radians) to face away from the wall
   playerRotationY = Math.PI;
 
-  playerRotationX = 0; // Reset vertical rotation
+  playerRotationX = 0;
   updateCameraPosition();
 }
 
 function updateCameraPosition() {
   fpCamera.position.copy(playerPosition);
+  fpCamera.position.y += playerHeight - 0.1;
   fpCamera.rotation.order = "YXZ";
   fpCamera.rotation.y = playerRotationY;
   fpCamera.rotation.x = playerRotationX;
@@ -281,7 +358,6 @@ function checkCollision(position) {
   const mazeX = Math.floor((position.x + (mazeSize * cellSize) / 2) / cellSize);
   const mazeZ = Math.floor((position.z + (mazeSize * cellSize) / 2) / cellSize);
 
-  // Check surrounding cells for collision
   for (let dx = -1; dx <= 1; dx++) {
     for (let dz = -1; dz <= 1; dz++) {
       const checkX = mazeX + dx;
@@ -298,8 +374,8 @@ function checkCollision(position) {
           const dx = position.x - wallX;
           const dz = position.z - wallZ;
           const distance = Math.sqrt(dx * dx + dz * dz);
-          if (distance < cellSize * 0.7) {
-            // Increased collision distance
+          if (distance < cellSize / 2 + playerRadius + 0.3) {
+            // Increase this value
             return true;
           }
         }
@@ -331,8 +407,8 @@ const playerMarker = new THREE.Mesh(
   new THREE.MeshPhongMaterial({ color: 0xff0000 })
 );
 playerMarker.rotation.x = Math.PI / 2;
-playerMarker.rotation.z = Math.PI / 2; // Rotate 90 degrees to the right
-playerMarker.visible = false; // Initially invisible
+playerMarker.rotation.z = Math.PI / 2;
+playerMarker.visible = false;
 playerMarker.castShadow = true;
 scene.add(playerMarker);
 
@@ -340,7 +416,7 @@ scene.add(playerMarker);
 function updatePlayerMarker() {
   playerMarker.position.copy(playerPosition);
   playerMarker.position.y = wallHeight + 0.5;
-  playerMarker.rotation.z = -playerRotationY + Math.PI; // Adjusted rotation
+  playerMarker.rotation.z = -playerRotationY + Math.PI;
 }
 
 // Add this function to create a 2D representation of the maze
@@ -367,9 +443,9 @@ function create2DMazeRepresentation() {
       if (maze2D[j][i] === 1) {
         cell.style.backgroundColor = "#808080";
       } else if (maze2D[j][i] === 2) {
-        cell.style.backgroundColor = "#0000ff"; // Start point (Blue)
+        cell.style.backgroundColor = "#0000ff";
       } else if (maze2D[j][i] === 3) {
-        cell.style.backgroundColor = "#00ff00"; // End point (Bright green)
+        cell.style.backgroundColor = "#00ff00";
       } else {
         cell.style.backgroundColor = "#fff";
       }
@@ -377,7 +453,6 @@ function create2DMazeRepresentation() {
     }
   }
 
-  // Add player marker (arrow)
   const playerMarker = document.createElement("div");
   playerMarker.style.position = "absolute";
   playerMarker.style.width = "0";
@@ -395,7 +470,6 @@ let maze2DRepresentation;
 let playerMarker2D;
 let cellSize2D;
 
-// Modify the toggleView function
 function toggleView() {
   if (currentCamera === fpCamera) {
     currentCamera = null;
@@ -420,36 +494,30 @@ function toggleView() {
   }
 }
 
-// Update the 2D player marker position and rotation
 function updatePlayerMarker2D() {
   if (playerMarker2D) {
     const mazeOffsetX = (mazeSize * cellSize) / 2;
     const mazeOffsetZ = (mazeSize * cellSize) / 2;
 
-    // Calculate the position relative to the maze
     const x = (playerPosition.x + mazeOffsetX) / cellSize;
     const z = (playerPosition.z + mazeOffsetZ) / cellSize;
 
     playerMarker2D.style.left = `${x * cellSize2D}px`;
     playerMarker2D.style.top = `${z * cellSize2D}px`;
 
-    // Update the rotation of the arrow (only Y-axis rotation)
     const rotation = -playerRotationY;
     playerMarker2D.style.transform = `translate(-50%, -50%) rotate(${rotation}rad)`;
   }
 }
 
-// Add event listener to the button
 document.getElementById("viewToggle").addEventListener("click", toggleView);
 
-// Modify the window resize event listener
 window.addEventListener("resize", () => {
   if (currentCamera === fpCamera) {
     fpCamera.aspect = window.innerWidth / window.innerHeight;
     fpCamera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   } else if (maze2DRepresentation) {
-    // Recreate the 2D maze representation to fit the new window size
     document.body.removeChild(maze2DRepresentation);
     const { mazeContainer, playerMarker, cellSize } =
       create2DMazeRepresentation();
@@ -461,7 +529,6 @@ window.addEventListener("resize", () => {
   }
 });
 
-// Add this function to check if the player has reached the end
 function checkEndReached() {
   const endX = (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize;
   const endZ = (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize;
@@ -475,7 +542,6 @@ function checkEndReached() {
   }
 }
 
-// Add this function to restart the game
 function restartGame() {
   initializePlayerPosition();
   playerRotationX = 0;
@@ -483,18 +549,16 @@ function restartGame() {
   updateCameraPosition();
 }
 
-// Animation loop
 function animate() {
   requestAnimationFrame(animate);
   movePlayer();
-  updatePlayerMarker2D(); // Call this every frame
-  checkEndReached(); // Add this line
+  updatePlayerMarker2D();
+  checkEndReached();
   if (currentCamera === fpCamera) {
     renderer.render(scene, currentCamera);
   }
 }
 
-// Start the animation loop
 animate();
 
 console.log("Maze created");
