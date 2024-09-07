@@ -211,40 +211,52 @@ function create3DMaze(maze2D) {
   floor.receiveShadow = true;
   walls.add(floor);
 
-  // Add start marker
-  const startMarker = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.3, 0.3, 0.1, 32),
-    new THREE.MeshStandardMaterial({
-      color: 0x0000ff,
-      roughness: 0.5,
-      metalness: 0.5,
-    })
-  );
+  // Replace the start marker code
+  const startMarkerGeometry = new THREE.TorusGeometry(0.4, 0.1, 16, 100);
+  const startMarkerMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0000ff,
+    emissive: 0x0000ff,
+    emissiveIntensity: 0.5,
+    roughness: 0.3,
+    metalness: 0.7,
+  });
+  const startMarker = new THREE.Mesh(startMarkerGeometry, startMarkerMaterial);
   startMarker.position.set(
     (1 - mazeSize / 2 + 0.5) * cellSize,
-    platformHeight + 0.05,
+    platformHeight + 0.5,
     (1 - mazeSize / 2 + 0.5) * cellSize
   );
   startMarker.rotation.x = Math.PI / 2;
   startMarker.castShadow = true;
   walls.add(startMarker);
 
-  // Add end sphere
-  const endSphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 32, 32),
-    new THREE.MeshStandardMaterial({
-      color: 0x00ff00,
-      roughness: 0.2,
-      metalness: 0.8,
-    })
-  );
-  endSphere.position.set(
+  // Replace the end sphere code
+  const endMarkerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+  const endMarkerMaterial = new THREE.MeshStandardMaterial({
+    color: 0xff0000, // Changed to red
+    emissive: 0xff0000, // Changed to red
+    emissiveIntensity: 0.8, // Increased for more glow
+    roughness: 0.2,
+    metalness: 0.8,
+  });
+  const endMarker = new THREE.Mesh(endMarkerGeometry, endMarkerMaterial);
+  endMarker.position.set(
     (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize,
     platformHeight + 0.5,
     (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize
   );
-  endSphere.castShadow = true;
-  walls.add(endSphere);
+  endMarker.castShadow = true;
+  walls.add(endMarker);
+
+  // Modify pulsating animation for end marker
+  function pulsateEndMarker() {
+    const scale = 1 + Math.sin(Date.now() * 0.005) * 0.2; // Increased amplitude for more noticeable pulsation
+    endMarker.scale.set(scale, scale, scale);
+    endMarker.material.emissiveIntensity =
+      0.5 + Math.sin(Date.now() * 0.005) * 0.3; // Pulsating glow
+    requestAnimationFrame(pulsateEndMarker);
+  }
+  pulsateEndMarker();
 
   scene.add(walls);
   return walls;
@@ -529,6 +541,24 @@ window.addEventListener("resize", () => {
   }
 });
 
+// Add this function to reset movement keys
+function resetMovementKeys() {
+  keys.KeyW = false;
+  keys.KeyS = false;
+  keys.KeyA = false;
+  keys.KeyD = false;
+}
+
+// Modify the restartGame function
+function restartGame() {
+  initializePlayerPosition();
+  playerRotationX = 0;
+  playerRotationY = 0;
+  updateCameraPosition();
+  resetMovementKeys(); // Add this line to reset movement keys
+}
+
+// Modify the checkEndReached function
 function checkEndReached() {
   const endX = (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize;
   const endZ = (mazeSize - 2 - mazeSize / 2 + 0.5) * cellSize;
@@ -539,14 +569,11 @@ function checkEndReached() {
   if (distance < 0.5 + 0.5) {
     alert("Congratulations! You've completed the maze!");
     restartGame();
+    // Add a small delay before re-enabling pointer lock
+    setTimeout(() => {
+      renderer.domElement.requestPointerLock();
+    }, 100);
   }
-}
-
-function restartGame() {
-  initializePlayerPosition();
-  playerRotationX = 0;
-  playerRotationY = 0;
-  updateCameraPosition();
 }
 
 function animate() {
