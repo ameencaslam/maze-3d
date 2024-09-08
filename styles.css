@@ -162,8 +162,8 @@ canvas {
 #joystick-container {
   position: fixed;
   bottom: 20px;
-  left: 40px;
-  right: 40px;
+  left: 50px;
+  right: 50px;
   display: none;
   justify-content: space-between;
   pointer-events: none;
