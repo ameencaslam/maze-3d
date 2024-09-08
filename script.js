@@ -31,19 +31,29 @@ const gameState = {
   cellSize2D: null,
   maze2DRepresentation: null,
   endReached: false,
+  isTouchDevice: false,
+  leftJoystick: null,
+  rightJoystick: null,
 };
 
 // Global functions
 function movePlayer() {
   const moveVector = new THREE.Vector3();
-  if (gameState.keys.KeyW) moveVector.z -= 1;
-  if (gameState.keys.KeyS) moveVector.z += 1;
-  if (gameState.keys.KeyA) moveVector.x -= 1;
-  if (gameState.keys.KeyD) moveVector.x += 1;
+  const speedMultiplier = gameState.isTouchDevice ? 0.5 : 1; // Adjust this value as needed
+
+  if (gameState.isTouchDevice) {
+    moveVector.z = gameState.keys.KeyW - gameState.keys.KeyS;
+    moveVector.x = gameState.keys.KeyD - gameState.keys.KeyA;
+  } else {
+    if (gameState.keys.KeyW) moveVector.z -= 1;
+    if (gameState.keys.KeyS) moveVector.z += 1;
+    if (gameState.keys.KeyA) moveVector.x -= 1;
+    if (gameState.keys.KeyD) moveVector.x += 1;
+  }
 
   moveVector.applyQuaternion(gameState.camera.quaternion);
   moveVector.y = 0; // Prevent vertical movement
-  moveVector.normalize().multiplyScalar(gameState.moveSpeed);
+  moveVector.normalize().multiplyScalar(gameState.moveSpeed * speedMultiplier);
 
   const newPosition = gameState.playerPosition.clone().add(moveVector);
   if (!checkCollision(newPosition)) {
@@ -160,6 +170,14 @@ function handleArrowKeyRotation() {
   );
 
   updateCameraPosition();
+}
+
+function isTouchDevice() {
+  return (
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    navigator.msMaxTouchPoints > 0
+  );
 }
 
 function initGame() {
@@ -538,7 +556,19 @@ function initGame() {
 
   // Lock pointer on click
   gameState.renderer.domElement.addEventListener("click", () => {
-    gameState.renderer.domElement.requestPointerLock();
+    if (!gameState.isTouchDevice) {
+      gameState.renderer.domElement.requestPointerLock();
+      showCursorNotification();
+    }
+  });
+
+  // Add an event listener for exiting pointer lock
+  document.addEventListener("pointerlockchange", () => {
+    if (document.pointerLockElement !== gameState.renderer.domElement) {
+      hideCursorNotification();
+    } else {
+      showCursorNotification();
+    }
   });
 
   // Add top-down camera
@@ -609,8 +639,8 @@ function initGame() {
     playerMarker.style.position = "absolute";
     playerMarker.style.width = "0";
     playerMarker.style.height = "0";
-    playerMarker.style.borderLeft = `${cellSize * 0.5}px solid transparent`;
-    playerMarker.style.borderRight = `${cellSize * 0.5}px solid transparent`;
+    playerMarker.style.borderLeft = `${cellSize * 0.4}px solid transparent`;
+    playerMarker.style.borderRight = `${cellSize * 0.4}px solid transparent`;
     playerMarker.style.borderBottom = `${cellSize * 1}px solid red`;
     playerMarker.style.transform = "translate(-50%, -50%)";
     mazeContainer.appendChild(playerMarker);
@@ -679,6 +709,39 @@ function initGame() {
 
   document.getElementById("viewToggle").addEventListener("click", toggleView);
 
+  // Add this function to toggle fullscreen
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((e) => {
+        console.error(`Error attempting to enable fullscreen: ${e.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }
+
+  // Add this function to update the fullscreen button icon
+  function updateFullscreenButtonIcon() {
+    const fullscreenIcon = document.getElementById("fullscreenIcon");
+    const exitFullscreenIcon = document.getElementById("exitFullscreenIcon");
+    if (document.fullscreenElement) {
+      fullscreenIcon.style.display = "none";
+      exitFullscreenIcon.style.display = "block";
+    } else {
+      fullscreenIcon.style.display = "block";
+      exitFullscreenIcon.style.display = "none";
+    }
+  }
+
+  // Set up fullscreen button
+  const fullscreenToggle = document.getElementById("fullscreenToggle");
+  fullscreenToggle.addEventListener("click", toggleFullscreen);
+
+  // Update fullscreen button icon when fullscreen state changes
+  document.addEventListener("fullscreenchange", updateFullscreenButtonIcon);
+
   function animate() {
     requestAnimationFrame(animate);
     movePlayer();
@@ -699,6 +762,8 @@ function initGame() {
 
     if (gameState.currentCamera === gameState.camera) {
       gameState.renderer.render(gameState.scene, gameState.currentCamera);
+    } else {
+      updatePlayerMarker2D(); // Update 2D marker even when in 2D view
     }
   }
 
@@ -707,9 +772,107 @@ function initGame() {
 
   console.log("Maze created");
 
-  // Show the toggle button when the game starts
+  // Show the toggle buttons when the game starts
   document.getElementById("viewToggle").classList.remove("hidden");
+  document.getElementById("fullscreenToggle").classList.add("visible");
+
+  gameState.isTouchDevice = isTouchDevice();
+
+  if (gameState.isTouchDevice) {
+    setupJoysticks();
+    document.getElementById("joystick-container").style.display = "flex";
+  } else {
+    document.getElementById("joystick-container").style.display = "none";
+  }
+
+  // Initialize fullscreen button icon
+  updateFullscreenButtonIcon();
+
+  // Add these functions at the appropriate place in your script
+
+  function showCursorNotification() {
+    if (!gameState.isTouchDevice) {
+      const notification = document.getElementById("cursor-notification");
+      notification.style.display = "block";
+    }
+  }
+
+  function hideCursorNotification() {
+    const notification = document.getElementById("cursor-notification");
+    notification.style.display = "none";
+  }
+
+  // Modify the DOMContentLoaded event listener to hide the notification on mobile
+  document.addEventListener("DOMContentLoaded", () => {
+    // ... existing code ...
+
+    if (isTouchDevice()) {
+      document.getElementById("cursor-notification").style.display = "none";
+    }
+
+    // ... rest of the existing code ...
+  });
 }
+
+function setupJoysticks() {
+  const joystickOptions = {
+    mode: "static",
+    position: { left: "50%", top: "50%" },
+    color: "white",
+    size: 120,
+    lockX: false,
+    lockY: false,
+    dynamicPage: true,
+  };
+
+  gameState.leftJoystick = nipplejs.create({
+    ...joystickOptions,
+    zone: document.getElementById("left-joystick"),
+  });
+
+  gameState.rightJoystick = nipplejs.create({
+    ...joystickOptions,
+    zone: document.getElementById("right-joystick"),
+  });
+
+  gameState.leftJoystick.on("move", (evt, data) => {
+    const force = Math.min(data.force, 1); // Reduce movement speed by half
+    const angle = data.angle.radian + Math.PI / 2; // Rotate angle by 90 degrees
+    gameState.keys.KeyW = Math.cos(angle) * force;
+    gameState.keys.KeyS = -Math.cos(angle) * force;
+    gameState.keys.KeyA = -Math.sin(angle) * force;
+    gameState.keys.KeyD = Math.sin(angle) * force;
+  });
+
+  gameState.leftJoystick.on("end", () => {
+    gameState.keys.KeyW = 0;
+    gameState.keys.KeyS = 0;
+    gameState.keys.KeyA = 0;
+    gameState.keys.KeyD = 0;
+  });
+
+  gameState.rightJoystick.on("move", (evt, data) => {
+    const force = Math.min(data.force, 1) * 0.01; // Reduce rotation speed
+    const angle = data.angle.radian + Math.PI / 2; // Rotate angle by 90 degrees
+    gameState.playerRotationY -= Math.sin(angle) * force;
+    gameState.playerRotationX -= Math.cos(angle) * force;
+    gameState.playerRotationX = Math.max(
+      -Math.PI / 2,
+      Math.min(Math.PI / 2, gameState.playerRotationX)
+    );
+    updateCameraPosition();
+  });
+}
+
+// Add an event listener for device orientation changes
+window.addEventListener("orientationchange", () => {
+  const landscapePrompt = document.getElementById("landscape-prompt");
+  if (window.orientation === 0 || window.orientation === 180) {
+    landscapePrompt.style.display = "flex";
+  } else {
+    landscapePrompt.style.display = "none";
+  }
+});
 
 // Event listener for DOMContentLoaded
 document.addEventListener("DOMContentLoaded", () => {
