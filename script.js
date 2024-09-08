@@ -715,6 +715,8 @@ function initGame() {
 
     if (gameState.currentCamera === gameState.camera) {
       gameState.renderer.render(gameState.scene, gameState.currentCamera);
+    } else {
+      updatePlayerMarker2D(); // Update 2D marker even when in 2D view
     }
   }
 
@@ -737,30 +739,31 @@ function initGame() {
 }
 
 function setupJoysticks() {
-  const leftJoystickOptions = {
+  const joystickOptions = {
+    mode: "static",
+    position: { left: "50%", top: "50%" },
+    color: "white",
+    size: 120,
+    lockX: false,
+    lockY: false,
+    dynamicPage: true,
+  };
+
+  gameState.leftJoystick = nipplejs.create({
+    ...joystickOptions,
     zone: document.getElementById("left-joystick"),
-    mode: "static",
-    position: { left: "50%", top: "50%" },
-    color: "white",
-    size: 120,
-  };
+  });
 
-  const rightJoystickOptions = {
+  gameState.rightJoystick = nipplejs.create({
+    ...joystickOptions,
     zone: document.getElementById("right-joystick"),
-    mode: "static",
-    position: { left: "50%", top: "50%" },
-    color: "white",
-    size: 120,
-  };
-
-  gameState.leftJoystick = nipplejs.create(leftJoystickOptions);
-  gameState.rightJoystick = nipplejs.create(rightJoystickOptions);
+  });
 
   gameState.leftJoystick.on("move", (evt, data) => {
-    const force = Math.min(data.force, 1) * 0.5; // Reduce sensitivity
-    const angle = data.angle.radian;
-    gameState.keys.KeyW = -Math.cos(angle) * force;
-    gameState.keys.KeyS = Math.cos(angle) * force;
+    const force = Math.min(data.force, 1);
+    const angle = data.angle.radian + Math.PI / 2; // Rotate angle by 90 degrees
+    gameState.keys.KeyW = Math.cos(angle) * force;
+    gameState.keys.KeyS = -Math.cos(angle) * force;
     gameState.keys.KeyA = -Math.sin(angle) * force;
     gameState.keys.KeyD = Math.sin(angle) * force;
   });
@@ -773,8 +776,8 @@ function setupJoysticks() {
   });
 
   gameState.rightJoystick.on("move", (evt, data) => {
-    const force = Math.min(data.force, 1) * 0.02; // Reduce sensitivity
-    const angle = data.angle.radian;
+    const force = Math.min(data.force, 1) * 0.05;
+    const angle = data.angle.radian + Math.PI / 2; // Rotate angle by 90 degrees
     gameState.playerRotationY -= Math.sin(angle) * force;
     gameState.playerRotationX -= Math.cos(angle) * force;
     gameState.playerRotationX = Math.max(
@@ -789,9 +792,9 @@ function setupJoysticks() {
 window.addEventListener("orientationchange", () => {
   const landscapePrompt = document.getElementById("landscape-prompt");
   if (window.orientation === 0 || window.orientation === 180) {
-    landscapePrompt.classList.remove("hidden");
+    landscapePrompt.style.display = "flex";
   } else {
-    landscapePrompt.classList.add("hidden");
+    landscapePrompt.style.display = "none";
   }
 });
 
