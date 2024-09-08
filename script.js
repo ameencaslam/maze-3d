@@ -31,15 +31,23 @@ const gameState = {
   cellSize2D: null,
   maze2DRepresentation: null,
   endReached: false,
+  isTouchDevice: false,
+  leftJoystick: null,
+  rightJoystick: null,
 };
 
 // Global functions
 function movePlayer() {
   const moveVector = new THREE.Vector3();
-  if (gameState.keys.KeyW) moveVector.z -= 1;
-  if (gameState.keys.KeyS) moveVector.z += 1;
-  if (gameState.keys.KeyA) moveVector.x -= 1;
-  if (gameState.keys.KeyD) moveVector.x += 1;
+  if (gameState.isTouchDevice) {
+    moveVector.z = gameState.keys.KeyW - gameState.keys.KeyS;
+    moveVector.x = gameState.keys.KeyD - gameState.keys.KeyA;
+  } else {
+    if (gameState.keys.KeyW) moveVector.z -= 1;
+    if (gameState.keys.KeyS) moveVector.z += 1;
+    if (gameState.keys.KeyA) moveVector.x -= 1;
+    if (gameState.keys.KeyD) moveVector.x += 1;
+  }
 
   moveVector.applyQuaternion(gameState.camera.quaternion);
   moveVector.y = 0; // Prevent vertical movement
@@ -160,6 +168,14 @@ function handleArrowKeyRotation() {
   );
 
   updateCameraPosition();
+}
+
+function isTouchDevice() {
+  return (
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    navigator.msMaxTouchPoints > 0
+  );
 }
 
 function initGame() {
@@ -709,7 +725,75 @@ function initGame() {
 
   // Show the toggle button when the game starts
   document.getElementById("viewToggle").classList.remove("hidden");
+
+  gameState.isTouchDevice = isTouchDevice();
+
+  if (gameState.isTouchDevice) {
+    setupJoysticks();
+    document.getElementById("joystick-container").style.display = "flex";
+  } else {
+    document.getElementById("joystick-container").style.display = "none";
+  }
 }
+
+function setupJoysticks() {
+  const leftJoystickOptions = {
+    zone: document.getElementById("left-joystick"),
+    mode: "static",
+    position: { left: "50%", top: "50%" },
+    color: "white",
+    size: 120,
+  };
+
+  const rightJoystickOptions = {
+    zone: document.getElementById("right-joystick"),
+    mode: "static",
+    position: { left: "50%", top: "50%" },
+    color: "white",
+    size: 120,
+  };
+
+  gameState.leftJoystick = nipplejs.create(leftJoystickOptions);
+  gameState.rightJoystick = nipplejs.create(rightJoystickOptions);
+
+  gameState.leftJoystick.on("move", (evt, data) => {
+    const force = Math.min(data.force, 1) * 0.5; // Reduce sensitivity
+    const angle = data.angle.radian;
+    gameState.keys.KeyW = -Math.cos(angle) * force;
+    gameState.keys.KeyS = Math.cos(angle) * force;
+    gameState.keys.KeyA = -Math.sin(angle) * force;
+    gameState.keys.KeyD = Math.sin(angle) * force;
+  });
+
+  gameState.leftJoystick.on("end", () => {
+    gameState.keys.KeyW = 0;
+    gameState.keys.KeyS = 0;
+    gameState.keys.KeyA = 0;
+    gameState.keys.KeyD = 0;
+  });
+
+  gameState.rightJoystick.on("move", (evt, data) => {
+    const force = Math.min(data.force, 1) * 0.02; // Reduce sensitivity
+    const angle = data.angle.radian;
+    gameState.playerRotationY -= Math.sin(angle) * force;
+    gameState.playerRotationX -= Math.cos(angle) * force;
+    gameState.playerRotationX = Math.max(
+      -Math.PI / 2,
+      Math.min(Math.PI / 2, gameState.playerRotationX)
+    );
+    updateCameraPosition();
+  });
+}
+
+// Add an event listener for device orientation changes
+window.addEventListener("orientationchange", () => {
+  const landscapePrompt = document.getElementById("landscape-prompt");
+  if (window.orientation === 0 || window.orientation === 180) {
+    landscapePrompt.classList.remove("hidden");
+  } else {
+    landscapePrompt.classList.add("hidden");
+  }
+});
 
 // Event listener for DOMContentLoaded
 document.addEventListener("DOMContentLoaded", () => {

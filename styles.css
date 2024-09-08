@@ -141,3 +141,69 @@ canvas {
 .hidden {
   display: none;
 }
+
+#landscape-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #39ff14;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  text-align: center;
+  z-index: 9999;
+}
+
+#joystick-container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  display: none;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.joystick {
+  width: 120px;
+  height: 120px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  pointer-events: auto;
+  position: relative;
+}
+
+.joystick::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@media (pointer: fine) {
+  #joystick-container {
+    display: none;
+  }
+}
+
+@media (orientation: portrait) {
+  #landscape-prompt {
+    display: flex;
+  }
+}
+
+@media (orientation: landscape) {
+  #landscape-prompt {
+    display: none;
+  }
+}
