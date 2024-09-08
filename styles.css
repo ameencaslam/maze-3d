@@ -204,3 +204,65 @@ canvas {
     display: none;
   }
 }
+
+.control-button {
+  position: absolute;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: "Press Start 2P", cursive;
+  z-index: 1000;
+}
+
+#viewToggle {
+  top: 20px;
+  right: 20px;
+}
+
+#fullscreenToggle {
+  top: 20px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  display: flex; /* Always use flex layout */
+  justify-content: center;
+  align-items: center;
+  visibility: hidden; /* Initially hidden */
+}
+
+#fullscreenToggle.visible {
+  visibility: visible; /* Show when visible class is added */
+}
+
+#fullscreenToggle svg {
+  width: 24px;
+  height: 24px;
+  fill: #001011;
+}
+
+#fullscreenIcon,
+#exitFullscreenIcon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#cursor-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  opacity: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(228, 228, 228, 0.7);
+  color: #000000;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-family: "Press Start 2P", cursive;
+  font-size: 10px;
+  z-index: 10000;
+  display: none;
+}
