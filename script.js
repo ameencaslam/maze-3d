@@ -852,7 +852,7 @@ function setupJoysticks() {
   });
 
   gameState.rightJoystick.on("move", (evt, data) => {
-    const force = Math.min(data.force, 1) * 0.01; // Reduce rotation speed
+    const force = Math.min(data.force, 1) * 0.02; // Reduce rotation speed
     const angle = data.angle.radian + Math.PI / 2; // Rotate angle by 90 degrees
     gameState.playerRotationY -= Math.sin(angle) * force;
     gameState.playerRotationX -= Math.cos(angle) * force;
